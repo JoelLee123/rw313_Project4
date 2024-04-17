@@ -1,39 +1,49 @@
 import java.net.*;
 import java.util.concurrent.*;
+import java.io.*;
 
 public class VoIPServer {
-    private ServerSocket serverSocket;
+    private DatagramSocket socket;
     private ExecutorService pool;
 
-    public VoIPServer(int port) {
-        try {
-            serverSocket = new ServerSocket(port);
-            pool = Executors.newCachedThreadPool();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public VoIPServer(int port) throws SocketException {
+        socket = new DatagramSocket(port);
+        pool = Executors.newCachedThreadPool();
     }
 
     public void acceptConnections() {
-        while (!serverSocket.isClosed()) {
+        byte[] buffer = new byte[1024]; // Adjust buffer size based on expected packet size
+        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+
+        while (true) {
             try {
-                Socket clientSocket = serverSocket.accept();
-                pool.execute(new VoIPSessionHandler(clientSocket));
+                socket.receive(packet); // Receive packet
+                pool.execute(new VoIPSessionHandler(socket, packet)); // Handle packet
             } catch (IOException e) {
-                e.printStackTrace();
+                System.out.println("Socket error: " + e.getMessage());
+                break;
             }
         }
     }
 }
 
 class VoIPSessionHandler implements Runnable {
-    private Socket clientSocket;
+    private DatagramSocket socket;
+    private DatagramPacket packet;
 
-    public VoIPSessionHandler(Socket clientSocket) {
-        this.clientSocket = clientSocket;
+    public VoIPSessionHandler(DatagramSocket socket, DatagramPacket packet) {
+        this.socket = socket;
+        this.packet = packet;
     }
 
     public void run() {
-        // Handle client connections for voice calls
+        // Here you could add logic to forward the packet to other clients or process it
+        System.out.println("Received packet from " + packet.getAddress().toString());
+        // Echo the packet back to the sender as an example
+        try {
+            socket.send(packet);
+        } catch (IOException e) {
+            System.out.println("Error sending packet: " + e.getMessage());
+        }
     }
 }

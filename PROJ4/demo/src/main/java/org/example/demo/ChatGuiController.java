@@ -15,6 +15,7 @@ import javafx.stage.Stage;
 public class ChatGuiController extends Application {
     private String username;
     private Client client;
+    private VoIPClient voIPClient;
     @FXML
     private TextArea InputMessage;
     @FXML
@@ -22,7 +23,7 @@ public class ChatGuiController extends Application {
     @FXML
     private TextArea MessageOutput;
     @FXML
-    private Button btnSendMessage;
+    private Button btnSendMessage, btnStartCall;
 
     /**
      * Default constructor for ChatGuiController.
@@ -56,6 +57,10 @@ public class ChatGuiController extends Application {
      */
     public void setClient(Client client) {
         this.client = client;
+    }
+
+    public void setVoipClient(VoIPClient voiIPClient) {
+        this.voIPClient = voiIPClient;
     }
 
     /**

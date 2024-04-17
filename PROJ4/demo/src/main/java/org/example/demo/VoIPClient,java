@@ -1,0 +1,38 @@
+import javax.sound.sampled.*;
+import java.io.*;
+import java.net.*;
+
+public class VoIPClient {
+    private AudioFormat audioFormat;
+    private TargetDataLine microphone;
+    private SourceDataLine speakers;
+
+    public VoIPClient() {
+        try {
+            audioFormat = getAudioFormat();
+            DataLine.Info micInfo = new DataLine.Info(TargetDataLine.class, audioFormat);
+            DataLine.Info speakerInfo = new DataLine.Info(SourceDataLine.class, audioFormat);
+            microphone = (TargetDataLine) AudioSystem.getLine(micInfo);
+            speakers = (SourceDataLine) AudioSystem.getLine(speakerInfo);
+        } catch (LineUnavailableException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private AudioFormat getAudioFormat() {
+        float sampleRate = 8000.0F;
+        int sampleSizeInBits = 16;
+        int channels = 2;
+        boolean signed = true;
+        boolean bigEndian = false;
+        return new AudioFormat(sampleRate, sampleSizeInBits, channels, signed, bigEndian);
+    }
+
+    public void start() {
+        // Logic to start capturing audio and start the call
+    }
+
+    public void stop() {
+        // Logic to stop capturing audio and end the call
+    }
+}

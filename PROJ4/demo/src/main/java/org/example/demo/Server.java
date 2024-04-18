@@ -1,36 +1,48 @@
 package org.example.demo;
 
+import javafx.application.Application;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * The Server class is responsible for handling the server-side operations
- * of the chat application. It listens for incoming client connections and
- * creates a new thread for each connected client.
- */
-public class Server {
+public class Server extends Application {
 
-    private final ServerSocket serverSocket;
+    private ServerSocket serverSocket;
     public static Set<String> activeUsernames = ConcurrentHashMap.newKeySet();
+    private static ServerController controller;
 
-    /**
-     * Constructs a Server instance with a specified ServerSocket.
-     *
-     * @param serverSocket The ServerSocket to be used for listening to incoming
-     *                     connections.
-     */
-    public Server(ServerSocket serverSocket) {
-        this.serverSocket = serverSocket;
+    @Override
+    public void start(Stage primaryStage) {
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("ServerGUI.fxml"));
+            Scene scene = new Scene(fxmlLoader.load());
+            primaryStage.setTitle("Server");
+            primaryStage.setScene(scene);
+            primaryStage.show();
+
+            controller = fxmlLoader.getController();
+
+            Thread serverThread = new Thread(() -> {
+                try {
+                    serverSocket = new ServerSocket(4044);
+                    startServer();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            serverThread.setDaemon(true);
+            serverThread.start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    /**
-     * Starts the server and listens for incoming client connections.
-     * When a new client connects, it starts a new ClientHandler thread to handle
-     * the client.
-     */
     public void startServer() {
         try {
             while (!serverSocket.isClosed()) {
@@ -44,10 +56,6 @@ public class Server {
         }
     }
 
-    /**
-     * Closes the server socket and releases any system resources associated with
-     * it.
-     */
     public void closeServerSocket() {
         try {
             if (serverSocket != null) {
@@ -58,15 +66,11 @@ public class Server {
         }
     }
 
-    /**
-     * The main entry point for the server application.
-     *
-     * @param args Command-line arguments (not used).
-     * @throws IOException If an I/O error occurs when opening the socket.
-     */
-    public static void main(String[] args) throws IOException {
-        ServerSocket serverSocket = new ServerSocket(4044);
-        Server server = new Server(serverSocket);
-        server.startServer();
+    public static ServerController getController() {
+        return controller;
+    }
+
+    public static void main(String[] args) {
+        launch(args);
     }
 }

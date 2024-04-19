@@ -4,6 +4,7 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.VBox;
@@ -28,6 +29,12 @@ public class ChatGuiController extends Application {
     private TextArea MessageOutput;
     @FXML
     private VBox voiceNoteContainer;
+    @FXML
+    private Button btnStartRecording;
+    @FXML
+    private Button btnEndRecording;
+    @FXML
+    private Button btnSendMessage;
 
     /* Audio related variables */
     private TargetDataLine audioLine;
@@ -108,6 +115,9 @@ public class ChatGuiController extends Application {
     @FXML
     void btnStartRecordingClicked(ActionEvent event) {
 
+        btnStartRecording.setDisable(true);
+        btnSendMessage.setDisable(true);
+        btnEndRecording.setDisable(false);
         try {
             //Initialize the audioFormat and audioLine
             audioFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100, 16, 2, 4, 44100, false);
@@ -160,6 +170,13 @@ public class ChatGuiController extends Application {
     void btnEndRecordingClicked(ActionEvent event) {
         System.out.println("End Recording Clicked");
 
+        //Enable buttons again
+        btnStartRecording.setDisable(false);
+        btnSendMessage.setDisable(false);
+
+        //Disable end recording button once clicked
+        btnEndRecording.setDisable(true);
+
         //Stop audio recording
         recording = false;
         audioLine.stop();
@@ -177,10 +194,29 @@ public class ChatGuiController extends Application {
         playAudio(encodedAudioData);
 
         //Create a new audio message and send it to the server
-        Message audioMessage = new Message("audio",username, null, encodedAudioData, true);
+        Message audioMessage = null;
+
+        //HERE I WANT TO DO SOME CHECKS FOR PRIVATE VOICE NOTES
+        String whisper = InputMessage.getText();
+        if (whisper.isEmpty()) {
+            //NORMAL BROADCAST AS USUAL
+            System.out.println("PUBLIC VOICE NOTE CASE");
+            audioMessage = new Message("broadcast",username, null, encodedAudioData, true);
+        } else if (whisper.startsWith("/w")) {
+            //BASICALLY DOING WHAT JOSEF DID IN SEND MESSAGE
+            System.out.println("PRIVATE VOICE NOTE CASE");
+            String[] parts = whisper.split(" ",2); //Only 2 parts; /w and 'Name'
+            String recipient = parts[1];
+            audioMessage = new Message("private", username, recipient, encodedAudioData, true);
+        } else {
+            System.out.println("HANDLE THIS BETTER - FOR NOW THIS WILL DO!");
+            System.exit(0);
+        }
+
         System.out.println("Message object created");
         client.sendMessage(audioMessage);
         System.out.println("Message sent");
+        InputMessage.clear();
     }
 
     private void playAudio(byte[] audioData) {

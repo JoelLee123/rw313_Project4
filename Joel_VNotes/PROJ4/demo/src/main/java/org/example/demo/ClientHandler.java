@@ -1,5 +1,7 @@
 package org.example.demo;
 
+import javafx.scene.Parent;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -78,7 +80,12 @@ public class ClientHandler implements Runnable {
                 } else {
                     //OBJECT RECEIVED REFLECTS AUDIO
                     System.out.println("Object in run method is an audio object");
-                    broadcastMessage(messageFromClient);
+                    if (messageFromClient.getType().equals("private")) {
+                        sendPrivateMessage(messageFromClient);
+                    } else {
+                        broadcastMessage(messageFromClient);
+                    }
+
                 }
             } catch (IOException | ClassNotFoundException e) {
                 System.out.println(clientUsername + " has disconnected!");

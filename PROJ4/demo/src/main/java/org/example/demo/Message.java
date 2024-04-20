@@ -13,7 +13,10 @@ public class Message implements Serializable {
     private final String type; // "broadcast" or "private"
     private final String sender;
     private final String recipient; // Used for private messages
-    private final String content;
+    private final String textContent;
+
+    private final byte[] audioContent;
+    private final boolean isAudio;
 
     /**
      * Constructs a new Message instance with the specified parameters.
@@ -21,13 +24,24 @@ public class Message implements Serializable {
      * @param type      The type of the message ("broadcast" or "private").
      * @param sender    The username of the sender.
      * @param recipient The username of the recipient (for private messages).
-     * @param content   The textual content of the message.
+     * @param textContent   The textual content of the message.
      */
-    public Message(String type, String sender, String recipient, String content) {
+    public Message(String type, String sender, String recipient, String textContent, boolean isAudio) {
         this.type = type;
         this.sender = sender;
         this.recipient = recipient;
-        this.content = content;
+        this.textContent = textContent;
+        this.audioContent = null;
+        this.isAudio = isAudio;
+    }
+
+    public Message(String type, String sender, String recipient, byte[] audioContent, boolean isAudio) {
+        this.type = type;
+        this.sender = sender;
+        this.recipient = recipient;
+        this.textContent = null;    //Voice notes have no text
+        this.audioContent = audioContent;
+        this.isAudio = isAudio;
     }
 
     /**
@@ -63,6 +77,15 @@ public class Message implements Serializable {
      * @return The textual content of the message.
      */
     public String getContent() {
-        return content;
+        return textContent;
+    }
+
+    //VOICE NOTE METHODS
+    public byte[] getAudioContent() {
+        return audioContent;
+    }
+
+    public boolean getIsAudio() {
+        return isAudio;
     }
 }

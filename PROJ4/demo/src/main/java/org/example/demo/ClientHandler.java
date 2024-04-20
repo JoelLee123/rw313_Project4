@@ -35,7 +35,7 @@ public class ClientHandler implements Runnable {
             this.clientUsername = usernameMessage.getContent();
 
             if (!Server.activeUsernames.add(this.clientUsername)) {
-                objectOutputStream.writeObject(new Message("login", "SERVER", null, "Username is already taken."));
+                objectOutputStream.writeObject(new Message("login", "SERVER", null, "Username is already taken.",false));
                 objectOutputStream.flush();
                 Server.activeUsernames.remove(this.clientUsername);
                 closeEverything(socket, objectInputStream, objectOutputStream);
@@ -45,7 +45,7 @@ public class ClientHandler implements Runnable {
             clientHandlers.add(this);
             Server.activeUsernames.add(this.clientUsername);
             System.out.println(clientUsername + " has connected.");
-            broadcastMessage(new Message("broadcast", "SERVER", null, clientUsername + " has entered the chat."));
+            broadcastMessage(new Message("broadcast", "SERVER", null, clientUsername + " has entered the chat.",false));
 
         } catch (IOException | ClassNotFoundException e) {
             closeEverything(socket, objectInputStream, objectOutputStream);
@@ -62,19 +62,33 @@ public class ClientHandler implements Runnable {
         while (socket.isConnected()) {
             try {
                 messageFromClient = (Message) objectInputStream.readObject();
-                if (messageFromClient.getContent().equals("/leave") || messageFromClient == null) {
-                    System.out.println(clientUsername + " has disconnected!");
-                    broadcastMessage(new Message("broadcast", "SERVER", null, clientUsername + " has left the chat."));
-                    break;
-                } else if (messageFromClient.getType().equals("private")) {
-                    sendPrivateMessage(messageFromClient);
+
+                if (!messageFromClient.getIsAudio()) {
+                    System.out.println("Message is text");
+                    //OBJECT RECEIVED REFLECTS A TEXT MESSAGE -> AVOIDS NULL POINTER EXCEPTIONS
+                    if (messageFromClient.getContent().equals("/leave") || messageFromClient == null) {
+                        System.out.println(clientUsername + " has disconnected!");
+                        broadcastMessage(new Message("broadcast", "SERVER", null, clientUsername + " has left the chat.",false));
+                        break;
+                    } else if (messageFromClient.getType().equals("private")) {
+                        sendPrivateMessage(messageFromClient);
+                    } else {
+                        broadcastMessage(messageFromClient);
+                    }
                 } else {
-                    broadcastMessage(messageFromClient);
+                    //OBJECT RECEIVED REFLECTS AUDIO
+                    System.out.println("Object in run method is an audio object");
+                    if (messageFromClient.getType().equals("private")) {
+                        sendPrivateMessage(messageFromClient);
+                    } else {
+                        broadcastMessage(messageFromClient);
+                    }
                 }
+
             } catch (IOException | ClassNotFoundException e) {
                 System.out.println(clientUsername + " has disconnected!");
                 broadcastMessage(
-                        new Message("broadcast", "SERVER", null, clientUsername + " has left the chat."));
+                        new Message("broadcast", "SERVER", null, clientUsername + " has left the chat.",false));
                 break;
             }
         }
@@ -102,7 +116,7 @@ public class ClientHandler implements Runnable {
         // If the target user was not found, inform the sender
         try {
             objectOutputStream.writeObject(new Message("private", "SERVER", clientUsername,
-                    "User '" + message.getRecipient() + "' not found."));
+                    "User '" + message.getRecipient() + "' not found.",false));
             objectOutputStream.flush();
         } catch (IOException e) {
             closeEverything(socket, objectInputStream, objectOutputStream);

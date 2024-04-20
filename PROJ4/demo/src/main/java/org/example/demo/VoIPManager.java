@@ -30,8 +30,11 @@ public class VoIPManager {
     }
 
     public void start() throws IOException, LineUnavailableException {
+        System.out.println("A");
         setupAudioDevices(); // Setup microphone and speakers
+        System.out.println("B");
         setupMulticast(); // Setup multicast connection
+        System.out.println("C");
 
         speakers.start();
         microphone.start();
@@ -92,9 +95,15 @@ public class VoIPManager {
         if (networkInterface == null) {
             throw new IOException("No suitable network interface found for multicast.");
         }
+        System.out.println("SETUP MULTI: A");
         socket = new MulticastSocket(port);
-        groupAddress = InetAddress.getByName("230.0.0.1");
-        socket.joinGroup(new InetSocketAddress(groupAddress, port), networkInterface);
+        System.out.println("SETUP MULTI: B");
+        //230.0.0.1 - used by others
+        groupAddress = InetAddress.getByName("ff02::1");
+        System.out.println("SETUP MULTI: C");
+        //socket.joinGroup(new InetSocketAddress(groupAddress, port), networkInterface);
+        socket.joinGroup(new InetSocketAddress(groupAddress.getHostAddress(), port), networkInterface);
+        System.out.println("SETUP MULTI: D");
     }
 
     private void captureAudio() {

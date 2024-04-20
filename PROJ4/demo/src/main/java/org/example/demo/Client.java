@@ -12,6 +12,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.stage.Stage;
 
+import javax.swing.plaf.synth.SynthTextAreaUI;
+
 /**
  * The Client class handles the client-side functionality of the chat
  * application.
@@ -45,7 +47,7 @@ public class Client extends Application {
             this.username = username;
             this.voIPClient = voIPClient;
             // Send the username as a Message object to the server
-            sendMessage(new Message("login", username, null, username));
+            sendMessage(new Message("login", username, null, username, false));
             listenForMessage();
         } catch (IOException e) {
             closeEverything(socket, objectInputStream, objectOutputStream);
@@ -82,19 +84,24 @@ public class Client extends Application {
                 try {
                     messageFromServer = (Message) objectInputStream.readObject();
                     if (messageFromServer != null) {
-                        if (messageFromServer.getContent().equals("Username is already taken.")) {
-                            // Restart the client
-                            Platform.runLater(() -> {
-                                try {
-                                    closeEverything(socket, objectInputStream, objectOutputStream);
-                                    restartClient(username);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                            });
-                            stop();
-                            return;
+                        if (!messageFromServer.getIsAudio()) {
+                            if (messageFromServer.getContent().equals("Username is already taken.")) {
+                                // Restart the client
+                                Platform.runLater(() -> {
+                                    try {
+                                        closeEverything(socket, objectInputStream, objectOutputStream);
+                                        restartClient(username);
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                });
+                                stop();
+                                return;
+                            }
+                        } else {
+                            System.out.println("Message was an audio message - IN LISTEN FOR MESSAGE");
                         }
+
                         controller.displayMessage(messageFromServer);
                         controller.updateUsers();
                     } else {

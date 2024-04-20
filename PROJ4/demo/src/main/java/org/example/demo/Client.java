@@ -24,6 +24,7 @@ public class Client extends Application {
     private ObjectOutputStream objectOutputStream;
     private String username;
     private ChatGuiController controller;
+    public VoIPManager voIPClient;
     public Stage chatStage;
 
     /**
@@ -34,7 +35,7 @@ public class Client extends Application {
      * @param username   The username of the client.
      * @param controller The controller for the chat GUI.
      */
-    public Client(Socket socket, String username, ChatGuiController controller) {
+    public Client(Socket socket, String username, ChatGuiController controller, VoIPManager voIPClient) {
         this.controller = controller;
         try {
             this.socket = socket;
@@ -42,7 +43,7 @@ public class Client extends Application {
             this.objectOutputStream.flush();
             this.objectInputStream = new ObjectInputStream(socket.getInputStream());
             this.username = username;
-
+            this.voIPClient = voIPClient;
             // Send the username as a Message object to the server
             sendMessage(new Message("login", username, null, username));
             listenForMessage();

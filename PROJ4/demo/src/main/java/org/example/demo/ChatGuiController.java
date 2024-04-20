@@ -15,7 +15,7 @@ import javafx.stage.Stage;
 public class ChatGuiController extends Application {
     private String username;
     private Client client;
-    private VoIPClient voIPClient;
+
     @FXML
     private TextArea InputMessage;
     @FXML
@@ -59,8 +59,8 @@ public class ChatGuiController extends Application {
         this.client = client;
     }
 
-    public void setVoipClient(VoIPClient voiIPClient) {
-        this.voIPClient = voiIPClient;
+    public void setVoipClient(VoIPManager voiIPClient) {
+        this.client.voIPClient = voiIPClient;
     }
 
     /**
@@ -94,6 +94,25 @@ public class ChatGuiController extends Application {
             this.displayMessage(message);
         }
         InputMessage.clear();
+    }
+
+    @FXML
+    void btnStartCallClicked(ActionEvent event) {
+        if (this.client.voIPClient == null) {
+            System.out.println("VoIPClient has not been initialized.");
+            return;
+        }
+        try {
+            if (btnStartCall.getText().equals("Start Call")) {
+                this.client.voIPClient.start(); // Start the VoIP call
+                btnStartCall.setText("End Call");
+            } else {
+                this.client.voIPClient.stop(); // End the VoIP call
+                btnStartCall.setText("Start Call");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**

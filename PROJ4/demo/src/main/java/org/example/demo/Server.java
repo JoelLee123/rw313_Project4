@@ -38,6 +38,7 @@ public class Server extends Application {
             });
             serverThread.setDaemon(true);
             serverThread.start();
+
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -35,7 +35,7 @@ public class MainController {
     public void btnJoinServerClicked(ActionEvent event) throws Exception {
         String username = InputUsername.getText().trim();
         String ip = InputIP.getText().trim();
-
+        VoIPManager voIPClient = new VoIPManager();
         try {
             Socket socket = new Socket(ip, 4044);
             Stage stage2 = new Stage();
@@ -49,9 +49,10 @@ public class MainController {
             stage2.show();
 
             ChatGuiController controller = fxmlLoader2.getController();
-            Client client = new Client(socket, username, controller);
+            Client client = new Client(socket, username, controller, voIPClient);
 
             controller.setClient(client);
+            controller.setVoipClient(voIPClient);
             controller.setUsername(username);
             client.setChatStage(stage2);
 

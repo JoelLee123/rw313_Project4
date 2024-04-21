@@ -12,13 +12,12 @@ public class VoiceNote {
     private Media media;
     private MediaPlayer mediaPlayer;
 
-
     public VoiceNote(byte[] audioData, String sender, String fileName) {
         this.audioData = audioData;
         this.sender = sender;
         this.fileName = fileName;
 
-        String absolutePath = "/home/joel/CS313/Proj1_Proj4/PROJ4/demo/src/main/java/org/example/demo/" + fileName;
+        String absolutePath = "/home/drowwn/313/rw313_Project4/PROJ4/demo/src/main/java/org/example/demo/" + fileName;
         saveFile(absolutePath);
         System.out.println("OK COOL");
         this.media = new Media(new File(absolutePath).toURI().toString());
@@ -37,6 +36,7 @@ public class VoiceNote {
     public String getFileName() {
         return fileName;
     }
+
     void saveFile(String absolutePath) {
         System.out.println("Made it here");
 
@@ -51,7 +51,7 @@ public class VoiceNote {
     }
 
     public void play() {
-        //Play voice note using MediaPlayer
+        // Play voice note using MediaPlayer
         mediaPlayer.play();
     }
 }

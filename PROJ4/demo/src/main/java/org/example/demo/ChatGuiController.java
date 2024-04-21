@@ -32,7 +32,7 @@ public class ChatGuiController extends Application {
     @FXML
     private Button btnSendMessage, btnStartCall;
 
-    //Voice Note attributes
+    // Voice Note attributes
     @FXML
     private VBox voiceNoteContainer;
     @FXML
@@ -43,10 +43,9 @@ public class ChatGuiController extends Application {
     private AudioFormat audioFormat;
     private ByteArrayOutputStream audioByteStream;
     private byte[] audioData;
-    //Maybe I should set to tree when start recording
-    //Then set back to false once recording has finished?
+    // Maybe I should set to tree when start recording
+    // Then set back to false once recording has finished?
     private volatile boolean recording = true;
-
 
     /**
      * Default constructor for ChatGuiController.
@@ -146,7 +145,7 @@ public class ChatGuiController extends Application {
      */
     public void displayMessage(Message message) {
         Platform.runLater(() -> {
-            if (!message.getIsAudio()) {    //If not audio -> Must be text
+            if (!message.getIsAudio()) { // If not audio -> Must be text
                 System.out.println("Handling text data");
                 String formattedMessage = formatMessage(message);
                 MessageOutput.appendText(formattedMessage + "\n");
@@ -211,10 +210,12 @@ public class ChatGuiController extends Application {
     }
 
     /*
-      ================================================================================================================
-                                                   VOICE NOTE METHODS
-      ================================================================================================================
-    */
+     * =============================================================================
+     * ===================================
+     * VOICE NOTE METHODS
+     * =============================================================================
+     * ===================================
+     */
 
     @FXML
     void btnStartRecordingClicked(ActionEvent event) {
@@ -223,7 +224,7 @@ public class ChatGuiController extends Application {
         btnSendMessage.setDisable(true);
         btnEndRecording.setDisable(false);
         try {
-            //Initialize the audioFormat and audioLine
+            // Initialize the audioFormat and audioLine
             audioFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100, 16, 2, 4, 44100, false);
             DataLine.Info info = new DataLine.Info(TargetDataLine.class, audioFormat);
 
@@ -233,12 +234,13 @@ public class ChatGuiController extends Application {
 
             audioLine = (TargetDataLine) AudioSystem.getLine(info);
             audioLine.open();
-            audioLine.start();  //The start of the recording
+            audioLine.start(); // The start of the recording
 
-            //Initialize the audioByteSteam
+            // Initialize the audioByteSteam
             audioByteStream = new ByteArrayOutputStream();
 
-            //We want to start recording on a separate thread so that recording audio does not affect the other parts of the program
+            // We want to start recording on a separate thread so that recording audio does
+            // not affect the other parts of the program
             new Thread(() -> {
                 System.out.println("Start Recording...");
                 recordAudio();
@@ -274,42 +276,41 @@ public class ChatGuiController extends Application {
     void btnEndRecordingClicked(ActionEvent event) {
         System.out.println("End Recording Clicked");
 
-        //Enable buttons again
+        // Enable buttons again
         btnStartRecording.setDisable(false);
         btnSendMessage.setDisable(false);
 
-        //Disable end recording button once clicked
+        // Disable end recording button once clicked
         btnEndRecording.setDisable(true);
 
-        //Stop audio recording
+        // Stop audio recording
         recording = false;
         audioLine.stop();
         audioLine.close();
 
-        //Encode audio data
+        // Encode audio data
         audioData = audioByteStream.toByteArray();
-
 
         byte[] encodedAudioData = encodeAudioData(audioData);
         System.out.println("Data encoded");
 
-        //PLAYBACK FEATURE - USED FOR DEBUGGING!
+        // PLAYBACK FEATURE - USED FOR DEBUGGING!
         System.out.println("Size of encoded audio in bytes: " + encodedAudioData.length);
         playAudio(encodedAudioData);
 
-        //Create a new audio message and send it to the server
+        // Create a new audio message and send it to the server
         Message audioMessage = null;
 
-        //HERE I WANT TO DO SOME CHECKS FOR PRIVATE VOICE NOTES
+        // HERE I WANT TO DO SOME CHECKS FOR PRIVATE VOICE NOTES
         String whisper = InputMessage.getText();
         if (whisper.isEmpty()) {
-            //NORMAL BROADCAST AS USUAL
+            // NORMAL BROADCAST AS USUAL
             System.out.println("PUBLIC VOICE NOTE CASE");
-            audioMessage = new Message("broadcast",username, null, encodedAudioData, true);
+            audioMessage = new Message("broadcast", username, null, encodedAudioData, true);
         } else if (whisper.startsWith("/w")) {
-            //BASICALLY DOING WHAT JOSEF DID IN SEND MESSAGE
+            // BASICALLY DOING WHAT JOSEF DID IN SEND MESSAGE
             System.out.println("PRIVATE VOICE NOTE CASE");
-            String[] parts = whisper.split(" ",2); //Only 2 parts; /w and 'Name'
+            String[] parts = whisper.split(" ", 2); // Only 2 parts; /w and 'Name'
             String recipient = parts[1];
             audioMessage = new Message("private", username, recipient, encodedAudioData, true);
         } else {
@@ -351,9 +352,8 @@ public class ChatGuiController extends Application {
             // Encode the audioData to a suitable format (e.g., MP3)
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             AudioInputStream audioInputStream = new AudioInputStream(
-                    new ByteArrayInputStream(audioData), audioFormat, audioData.length / audioFormat.getFrameSize()
-            );
-            //Decided to use WAV as audio quality is better - also easier to work with
+                    new ByteArrayInputStream(audioData), audioFormat, audioData.length / audioFormat.getFrameSize());
+            // Decided to use WAV as audio quality is better - also easier to work with
             AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outputStream);
             return outputStream.toByteArray();
         } catch (IOException e) {
@@ -368,7 +368,7 @@ public class ChatGuiController extends Application {
 
         byte[] audioData = message.getAudioContent();
         String sender = message.getSender();
-        //Unique filename for voice note based on time created
+        // Unique filename for voice note based on time created
         String fileName = "voice_note_" + System.currentTimeMillis() + ".wav";
 
         VoiceNote voiceNote = new VoiceNote(audioData, sender, fileName);

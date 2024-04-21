@@ -95,15 +95,10 @@ public class VoIPManager {
         if (networkInterface == null) {
             throw new IOException("No suitable network interface found for multicast.");
         }
-        System.out.println("SETUP MULTI: A");
         socket = new MulticastSocket(port);
-        System.out.println("SETUP MULTI: B");
-        //230.0.0.1 - used by others
+        // 230.0.0.1 - used by others
         groupAddress = InetAddress.getByName("ff02::1");
-        System.out.println("SETUP MULTI: C");
-        //socket.joinGroup(new InetSocketAddress(groupAddress, port), networkInterface);
         socket.joinGroup(new InetSocketAddress(groupAddress.getHostAddress(), port), networkInterface);
-        System.out.println("SETUP MULTI: D");
     }
 
     private void captureAudio() {
@@ -121,16 +116,32 @@ public class VoIPManager {
 
     private void receiveAudio() {
         byte[] buffer = new byte[1024]; // Ensure buffer size matches the send buffer
+        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
         while (speakers != null && speakers.isOpen()) {
-            DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
             try {
                 socket.receive(packet);
-                if (!packet.getAddress().equals(socket.getLocalAddress())) {
+                // Check if the packet's source is not the local address to prevent feedback
+                if (!isLocalAddress(packet.getAddress())) {
                     speakers.write(packet.getData(), 0, packet.getLength());
                 }
             } catch (IOException e) {
                 System.err.println("Error receiving audio packet: " + e.getMessage());
             }
+        }
+    }
+
+    /**
+     * Checks if the given address is one of the local interface addresses.
+     * 
+     * @param addr the InetAddress to check
+     * @return true if addr is a local address, false otherwise
+     */
+    private boolean isLocalAddress(InetAddress addr) {
+        try {
+            return NetworkInterface.getByInetAddress(addr) != null;
+        } catch (SocketException e) {
+            e.printStackTrace();
+            return false;
         }
     }
 

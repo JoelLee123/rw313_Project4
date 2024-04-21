@@ -18,10 +18,12 @@ public class VoiceNote {
         this.sender = sender;
         this.fileName = fileName;
 
-        String absolutePath = "/home/joel/CS313/Proj1_Proj4/PROJ4/demo/src/main/java/org/example/demo/" + fileName;
-        saveFile(absolutePath);
+        String currentDir = System.getProperty("user.dir");
+        String projectPath = "/demo/src/main/java/org/example/demo/Notes/";
+        String relativePath = currentDir + projectPath + fileName;
+        saveFile(relativePath);
         System.out.println("OK COOL");
-        this.media = new Media(new File(absolutePath).toURI().toString());
+        this.media = new Media(new File(relativePath).toURI().toString());
         System.out.println("Fine");
         this.mediaPlayer = new MediaPlayer(media);
     }

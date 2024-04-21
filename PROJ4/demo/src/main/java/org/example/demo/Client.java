@@ -47,8 +47,11 @@ public class Client extends Application {
             this.username = username;
             this.voIPClient = voIPClient;
             // Send the username as a Message object to the server
+            System.out.println("");
             sendMessage(new Message("login", username, null, username, false));
+            System.out.println("");
             listenForMessage();
+            System.out.println("");
         } catch (IOException e) {
             closeEverything(socket, objectInputStream, objectOutputStream);
         }

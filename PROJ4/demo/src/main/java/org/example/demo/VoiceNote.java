@@ -12,7 +12,6 @@ public class VoiceNote {
     private Media media;
     private MediaPlayer mediaPlayer;
 
-
     public VoiceNote(byte[] audioData, String sender, String fileName) {
         this.audioData = audioData;
         this.sender = sender;
@@ -39,6 +38,7 @@ public class VoiceNote {
     public String getFileName() {
         return fileName;
     }
+
     void saveFile(String absolutePath) {
         System.out.println("Made it here");
 
@@ -53,7 +53,7 @@ public class VoiceNote {
     }
 
     public void play() {
-        //Play voice note using MediaPlayer
+        // Play voice note using MediaPlayer
         mediaPlayer.play();
     }
 }

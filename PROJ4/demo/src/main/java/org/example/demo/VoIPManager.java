@@ -1,9 +1,10 @@
 package org.example.demo;
 
 import javax.sound.sampled.*;
-import java.io.*;
+import java.io.IOException;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class VoIPManager {
     private AudioFormat audioFormat;
@@ -14,6 +15,7 @@ public class VoIPManager {
     private NetworkInterface networkInterface;
     private Set<InetAddress> localAddresses;
     private int port = 42069; // Example multicast port, adjust as needed
+    private Map<String, InetAddress> userGroupMap = new ConcurrentHashMap<>();
 
     public VoIPManager() throws IOException {
         audioFormat = getAudioFormat();
@@ -44,18 +46,36 @@ public class VoIPManager {
     }
 
     public void start() throws IOException, LineUnavailableException {
-        System.out.println("A");
+        // Set up a default multicast group for all users
+        groupAddress = InetAddress.getByName("239.255.0.1"); // Default multicast address for group calls
+        setupMulticast(groupAddress);
+        startCommunication();
+    }
+
+    public void startCallWithUser(String username, String targetMulticastAddress)
+            throws IOException, LineUnavailableException {
+        // Set up a specific multicast group for a call between specific users
+        if (!userGroupMap.containsKey(username)) {
+            InetAddress address = InetAddress.getByName(targetMulticastAddress);
+            userGroupMap.put(username, address);
+            setupMulticast(address);
+            startCommunication();
+        }
+    }
+
+    private void setupMulticast(InetAddress address) throws IOException {
+        socket = new MulticastSocket(port);
+        socket.joinGroup(new InetSocketAddress(address, port), networkInterface);
+        this.groupAddress = address; // Update the current group address
+    }
+
+    private void startCommunication() throws LineUnavailableException {
         setupAudioDevices(); // Setup microphone and speakers
-        System.out.println("B");
-        setupMulticast(); // Setup multicast connection
-        System.out.println("C");
 
         speakers.start();
         microphone.start();
-        Thread captureThread = new Thread(this::captureAudio);
-        captureThread.start();
-        Thread receiveThread = new Thread(this::receiveAudio);
-        receiveThread.start();
+        new Thread(this::captureAudio).start();
+        new Thread(this::receiveAudio).start();
     }
 
     public void stop() {
@@ -72,11 +92,11 @@ public class VoIPManager {
         if (socket != null) {
             try {
                 socket.leaveGroup(new InetSocketAddress(groupAddress, port), networkInterface);
+                socket.close();
+                socket = null;
             } catch (IOException e) {
                 System.err.println("Failed to leave multicast group: " + e.getMessage());
             }
-            socket.close();
-            socket = null;
         }
     }
 
@@ -105,18 +125,8 @@ public class VoIPManager {
         return speakers;
     }
 
-    private void setupMulticast() throws IOException {
-        if (networkInterface == null) {
-            throw new IOException("No suitable network interface found for multicast.");
-        }
-        socket = new MulticastSocket(port);
-        // 230.0.0.1 - used by others
-        groupAddress = InetAddress.getByName("ff02::1");
-        socket.joinGroup(new InetSocketAddress(groupAddress.getHostAddress(), port), networkInterface);
-    }
-
     private void captureAudio() {
-        byte[] buffer = new byte[1024]; // Adjust buffer size based on requirements
+        byte[] buffer = new byte[1024];
         while (microphone != null && microphone.isOpen()) {
             int bytesRead = microphone.read(buffer, 0, buffer.length);
             DatagramPacket packet = new DatagramPacket(buffer, bytesRead, groupAddress, port);
@@ -129,12 +139,11 @@ public class VoIPManager {
     }
 
     private void receiveAudio() {
-        byte[] buffer = new byte[1024]; // Ensure buffer size matches the send buffer
+        byte[] buffer = new byte[1024];
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
         while (speakers != null && speakers.isOpen()) {
             try {
                 socket.receive(packet);
-                // Check if the packet's source is not the local address to prevent feedback
                 if (!isLocalPacket(packet)) {
                     speakers.write(packet.getData(), 0, packet.getLength());
                 }

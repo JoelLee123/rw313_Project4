@@ -101,10 +101,7 @@ public class Client extends Application {
                                 stop();
                                 return;
                             }
-                        } else {
-                            System.out.println("Message was an audio message - IN LISTEN FOR MESSAGE");
                         }
-
                         controller.displayMessage(messageFromServer);
                         controller.updateUsers();
                     } else {

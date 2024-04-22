@@ -121,7 +121,7 @@ public class VoIPManager {
             try {
                 socket.receive(packet);
                 // Check if the packet's source is not the local address to prevent feedback
-                if (!isLocalAddress(packet.getAddress())) {
+                if (!isLocalPacket(packet)) {
                     speakers.write(packet.getData(), 0, packet.getLength());
                 }
             } catch (IOException e) {
@@ -131,18 +131,30 @@ public class VoIPManager {
     }
 
     /**
-     * Checks if the given address is one of the local interface addresses.
+     * Checks if the given packet originated from any of the local network
+     * interfaces.
      * 
-     * @param addr the InetAddress to check
-     * @return true if addr is a local address, false otherwise
+     * @param packet the DatagramPacket to check
+     * @return true if the packet originated locally, false otherwise
      */
-    private boolean isLocalAddress(InetAddress addr) {
+    private boolean isLocalPacket(DatagramPacket packet) {
         try {
-            return NetworkInterface.getByInetAddress(addr) != null;
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface ni = interfaces.nextElement();
+                if (ni.isUp()) {
+                    for (InterfaceAddress interfaceAddress : ni.getInterfaceAddresses()) {
+                        InetAddress localAddress = interfaceAddress.getAddress();
+                        if (packet.getAddress().equals(localAddress)) {
+                            return true;
+                        }
+                    }
+                }
+            }
         } catch (SocketException e) {
             e.printStackTrace();
-            return false;
         }
+        return false;
     }
 
     public static NetworkInterface findMulticastInterface() throws SocketException {

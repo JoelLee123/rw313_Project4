@@ -18,7 +18,7 @@ public class VoiceNote {
         this.fileName = fileName;
 
         String currentDir = System.getProperty("user.dir");
-        String projectPath = "/demo/src/main/java/org/example/demo/Notes/";
+        String projectPath = "/PROJ4/demo/src/main/java/org/example/demo/Notes/";
         String relativePath = currentDir + projectPath + fileName;
         saveFile(relativePath);
         System.out.println("OK COOL");

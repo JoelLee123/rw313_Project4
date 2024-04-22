@@ -12,12 +12,26 @@ public class VoIPManager {
     private MulticastSocket socket;
     private InetAddress groupAddress;
     private NetworkInterface networkInterface;
+    private Set<InetAddress> localAddresses;
     private int port = 42069; // Example multicast port, adjust as needed
 
     public VoIPManager() throws IOException {
         audioFormat = getAudioFormat();
         networkInterface = findMulticastInterface();
-        // Microphone and speakers are not opened here; they're managed dynamically.
+        localAddresses = new HashSet<>();
+        populateLocalAddresses();
+    }
+
+    private void populateLocalAddresses() throws SocketException {
+        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+        while (interfaces.hasMoreElements()) {
+            NetworkInterface ni = interfaces.nextElement();
+            if (ni.isUp() && !ni.isLoopback()) {
+                for (InterfaceAddress interfaceAddress : ni.getInterfaceAddresses()) {
+                    localAddresses.add(interfaceAddress.getAddress());
+                }
+            }
+        }
     }
 
     private AudioFormat getAudioFormat() {
@@ -130,31 +144,8 @@ public class VoIPManager {
         }
     }
 
-    /**
-     * Checks if the given packet originated from any of the local network
-     * interfaces.
-     * 
-     * @param packet the DatagramPacket to check
-     * @return true if the packet originated locally, false otherwise
-     */
     private boolean isLocalPacket(DatagramPacket packet) {
-        try {
-            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-            while (interfaces.hasMoreElements()) {
-                NetworkInterface ni = interfaces.nextElement();
-                if (ni.isUp()) {
-                    for (InterfaceAddress interfaceAddress : ni.getInterfaceAddresses()) {
-                        InetAddress localAddress = interfaceAddress.getAddress();
-                        if (packet.getAddress().equals(localAddress)) {
-                            return true;
-                        }
-                    }
-                }
-            }
-        } catch (SocketException e) {
-            e.printStackTrace();
-        }
-        return false;
+        return localAddresses.contains(packet.getAddress());
     }
 
     public static NetworkInterface findMulticastInterface() throws SocketException {

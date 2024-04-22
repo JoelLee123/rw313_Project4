@@ -55,7 +55,7 @@
             <Font size="20.0" />
          </font>
       </Label>
-      <Button fx:id="btnEndRecording" layoutX="222.0" layoutY="394.0" mnemonicParsing="false" onAction="#btnEndRecordingClicked" prefHeight="48.0" prefWidth="175.0" style="-fx-background-color: #4169E1; -fx-border-color: black;" text="End Recording" textFill="WHITE">
+      <Button fx:id="btnEndRecording" disable="true" layoutX="222.0" layoutY="394.0" mnemonicParsing="false" onAction="#btnEndRecordingClicked" prefHeight="48.0" prefWidth="175.0" style="-fx-background-color: #4169E1; -fx-border-color: black;" text="End Recording" textFill="WHITE">
          <font>
             <Font name="Verdana Bold" size="18.0" />
          </font>

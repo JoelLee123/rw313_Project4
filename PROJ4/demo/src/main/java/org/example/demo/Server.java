@@ -74,4 +74,16 @@ public class Server extends Application {
     public static void main(String[] args) {
         launch(args);
     }
+
+    public static void updateActiveUserList() {
+        StringBuilder sb = new StringBuilder();
+        for (String username : activeUsernames) {
+            sb.append(username).append("\n");
+        }
+        controller.updateActiveUsers(sb.toString());
+    }
+
+    public static void updateClientActivity(String activity) {
+        controller.appendClientActivity(activity);
+    }
 }

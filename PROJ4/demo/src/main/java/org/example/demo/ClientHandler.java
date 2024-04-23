@@ -51,6 +51,8 @@ public class ClientHandler implements Runnable {
             System.out.println(clientUsername + " has connected.");
             broadcastMessage(
                     new Message("broadcast", "SERVER", null, clientUsername + " has entered the chat.", false));
+                    Server.updateActiveUserList();
+        Server.updateClientActivity(clientUsername + " has connected!");
 
         } catch (IOException | ClassNotFoundException e) {
             closeEverything(socket, objectInputStream, objectOutputStream);
@@ -73,6 +75,8 @@ public class ClientHandler implements Runnable {
                 System.out.println(clientUsername + " has disconnected!");
                 broadcastMessage(
                         new Message("broadcast", "SERVER", null, clientUsername + " has left the chat.", false));
+                Server.updateActiveUserList();
+                Server.updateClientActivity(clientUsername + " has disconnected!");
                 break;
             }
         }
@@ -150,6 +154,8 @@ public class ClientHandler implements Runnable {
      */
     private void handleLeave() {
         System.out.println(clientUsername + " has disconnected!");
+        Server.updateActiveUserList();
+        Server.updateClientActivity(clientUsername + " has disconnected!");
         broadcastMessage(new Message("broadcast", "SERVER", null, clientUsername + " has left the chat.", false));
     }
 
@@ -160,6 +166,7 @@ public class ClientHandler implements Runnable {
     public void removeClientHandler() {
         Server.activeUsernames.remove(this.clientUsername);
         clientHandlers.remove(this);
+        Server.updateActiveUserList();
     }
 
     /**

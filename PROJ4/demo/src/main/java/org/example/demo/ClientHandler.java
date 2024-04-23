@@ -51,8 +51,8 @@ public class ClientHandler implements Runnable {
             System.out.println(clientUsername + " has connected.");
             broadcastMessage(
                     new Message("broadcast", "SERVER", null, clientUsername + " has entered the chat.", false));
-                    Server.updateActiveUserList();
-        Server.updateClientActivity(clientUsername + " has connected!");
+            Server.updateActiveUserList();
+            Server.updateClientActivity(clientUsername + " has connected!");
 
         } catch (IOException | ClassNotFoundException e) {
             closeEverything(socket, objectInputStream, objectOutputStream);

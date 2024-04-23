@@ -92,8 +92,6 @@ public class VoIPManager {
      */
     public void start() {
         try {
-            String address = BASE_ADDRESS + 1;
-            System.out.println(address);
             activeInet = InetAddress.getByName(BASE_ADDRESS + 1);
             setupMulticast(activeInet);
             startCommunication();
@@ -304,7 +302,7 @@ public class VoIPManager {
      * Receives audio from the network and plays it through the speakers.
      */
     private void receiveAudio() {
-        byte[] buffer = new byte[1024];
+        byte[] buffer = new byte[2048];
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
         while (speakers != null && speakers.isOpen()) {
             try {

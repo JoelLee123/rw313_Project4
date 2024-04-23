@@ -3,15 +3,15 @@ package org.example.demo;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.Socket;
 import java.util.ArrayList;
+import java.net.*;
 
 /**
- * The ClientHandler class is responsible for managing individual client
- * connections
- * to the server, including sending and receiving messages.
+ * Manages individual client connections to the server, handling message sending
+ * and receiving.
  */
 public class ClientHandler implements Runnable {
+    // Static list of all active client handlers
     public static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
     private Socket socket;
     private ObjectInputStream objectInputStream;
@@ -19,10 +19,13 @@ public class ClientHandler implements Runnable {
     private String clientUsername;
 
     /**
-     * Constructs a ClientHandler instance with a specified socket.
-     * Initializes the streams and sets up the client connection.
+     * Initializes the client handler with a socket and sets up streams.
      *
-     * @param socket The socket representing the client connection.
+     * @param socket the socket representing the client connection
+     * @throws IOException            if an I/O error occurs when creating the input
+     *                                and output streams
+     * @throws ClassNotFoundException if the class of a serialized object cannot be
+     *                                found
      */
     public ClientHandler(Socket socket) {
         try {
@@ -31,20 +34,20 @@ public class ClientHandler implements Runnable {
             this.objectOutputStream.flush();
             this.objectInputStream = new ObjectInputStream(socket.getInputStream());
 
+            // Read the username sent by client
             Message usernameMessage = (Message) objectInputStream.readObject();
             this.clientUsername = usernameMessage.getContent();
 
+            // Check if username is already taken
             if (!Server.activeUsernames.add(this.clientUsername)) {
                 objectOutputStream
                         .writeObject(new Message("login", "SERVER", null, "Username is already taken.", false));
                 objectOutputStream.flush();
-                Server.activeUsernames.remove(this.clientUsername);
                 closeEverything(socket, objectInputStream, objectOutputStream);
                 return;
             }
 
             clientHandlers.add(this);
-            Server.activeUsernames.add(this.clientUsername);
             System.out.println(clientUsername + " has connected.");
             broadcastMessage(
                     new Message("broadcast", "SERVER", null, clientUsername + " has entered the chat.", false));
@@ -55,7 +58,8 @@ public class ClientHandler implements Runnable {
     }
 
     /**
-     * Listens for messages from the connected client and processes them.
+     * Listens for messages from the connected client and processes them
+     * accordingly.
      */
     @Override
     public void run() {
@@ -64,30 +68,7 @@ public class ClientHandler implements Runnable {
         while (socket.isConnected()) {
             try {
                 messageFromClient = (Message) objectInputStream.readObject();
-
-                if (!messageFromClient.getIsAudio()) {
-                    System.out.println("Message is text");
-                    // OBJECT RECEIVED REFLECTS A TEXT MESSAGE -> AVOIDS NULL POINTER EXCEPTIONS
-                    if (messageFromClient.getContent().equals("/leave") || messageFromClient == null) {
-                        System.out.println(clientUsername + " has disconnected!");
-                        broadcastMessage(new Message("broadcast", "SERVER", null,
-                                clientUsername + " has left the chat.", false));
-                        break;
-                    } else if (messageFromClient.getType().equals("private")) {
-                        sendPrivateMessage(messageFromClient);
-                    } else {
-                        broadcastMessage(messageFromClient);
-                    }
-                } else {
-                    // OBJECT RECEIVED REFLECTS AUDIO
-                    System.out.println("Object in run method is an audio object");
-                    if (messageFromClient.getType().equals("private")) {
-                        sendPrivateMessage(messageFromClient);
-                    } else {
-                        broadcastMessage(messageFromClient);
-                    }
-                }
-
+                processMessage(messageFromClient);
             } catch (IOException | ClassNotFoundException e) {
                 System.out.println(clientUsername + " has disconnected!");
                 broadcastMessage(
@@ -98,10 +79,29 @@ public class ClientHandler implements Runnable {
         removeClientHandler();
     }
 
+    private void processMessage(Message message) throws IOException {
+        if (!message.getIsAudio()) {
+            if (message.getContent().equals("/leave")) {
+                handleLeave();
+            } else if (message.getType().equals("private")) {
+                sendPrivateMessage(message);
+            } else if (message.getType().equals("call")) {
+                sendPrivateMessage(message);
+            } else {
+                broadcastMessage(message);
+            }
+        } else {
+            if (message.getType().equals("private"))
+                sendPrivateMessage(message);
+            else
+                broadcastMessage(message);
+        }
+    }
+
     /**
-     * Sends a private message to the specified recipient.
+     * Sends a private message to a specified recipient.
      *
-     * @param message The message to be sent.
+     * @param message the message to be sent privately
      */
     public void sendPrivateMessage(Message message) {
         for (ClientHandler clientHandler : clientHandlers) {
@@ -116,34 +116,41 @@ public class ClientHandler implements Runnable {
                 return;
             }
         }
-        // If the target user was not found, inform the sender
         try {
+            // Inform sender if the recipient is not found
             objectOutputStream.writeObject(new Message("private", "SERVER", clientUsername,
                     "User '" + message.getRecipient() + "' not found.", false));
             objectOutputStream.flush();
         } catch (IOException e) {
-            closeEverything(socket, objectInputStream, objectOutputStream);
+
         }
     }
 
     /**
      * Broadcasts a message to all connected clients except the sender.
      *
-     * @param message The message to be broadcasted.
+     * @param message the message to be broadcasted
      */
     public void broadcastMessage(Message message) {
         for (ClientHandler clientHandler : clientHandlers) {
-            try {
-                if (!clientHandler.clientUsername.equals(clientUsername)) {
+            if (!clientHandler.clientUsername.equals(clientUsername)) {
+                try {
                     clientHandler.objectOutputStream.writeObject(message);
                     clientHandler.objectOutputStream.flush();
+                } catch (IOException e) {
+                    closeEverything(clientHandler.socket, clientHandler.objectInputStream,
+                            clientHandler.objectOutputStream);
                 }
-            } catch (IOException e) {
-                closeEverything(clientHandler.socket, clientHandler.objectInputStream,
-                        clientHandler.objectOutputStream);
-                removeClientHandler();
             }
         }
+    }
+
+    /**
+     * Handles the "/leave" command by disconnecting the client.
+     */
+    private void handleLeave() {
+        System.out.println(clientUsername + " has disconnected!");
+        broadcastMessage(new Message("broadcast", "SERVER", null, clientUsername + " has left the chat.", false));
     }
 
     /**
@@ -156,12 +163,11 @@ public class ClientHandler implements Runnable {
     }
 
     /**
-     * Closes the socket and input/output streams associated with this client
-     * handler.
+     * Closes the socket and the input/output streams associated with this client.
      *
-     * @param socket             The socket to be closed.
-     * @param objectInputStream  The input stream to be closed.
-     * @param objectOutputStream The output stream to be closed.
+     * @param socket             the socket to be closed
+     * @param objectInputStream  the input stream to be closed
+     * @param objectOutputStream the output stream to be closed
      */
     public void closeEverything(Socket socket, ObjectInputStream objectInputStream,
             ObjectOutputStream objectOutputStream) {
@@ -174,6 +180,7 @@ public class ClientHandler implements Runnable {
                 objectInputStream.close();
             }
             if (socket != null) {
+                socket.close();
             }
         } catch (IOException e) {
             e.printStackTrace();

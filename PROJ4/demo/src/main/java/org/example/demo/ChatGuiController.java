@@ -43,6 +43,7 @@ public class ChatGuiController extends Application {
     private AudioFormat audioFormat;
     private ByteArrayOutputStream audioByteStream;
     private byte[] audioData;
+    private final String BASE_ADDRESS = "239.255.0.1";
     // Maybe I should set to tree when start recording
     // Then set back to false once recording has finished?
     private volatile boolean recording = true;
@@ -85,37 +86,54 @@ public class ChatGuiController extends Application {
         this.client.voIPClient = voiIPClient;
     }
 
-    /**
-     * Handles the action of the "Send Message" button being clicked.
-     * It sends the message to the server and displays it in the chat window.
-     *
-     * @param event The event that triggered the method call.
-     */
     @FXML
     void btnSendMessageClicked(ActionEvent event) {
-        String messageText = InputMessage.getText();
-        Message message;
+        String messageText = InputMessage.getText().trim(); // Ensure to trim any leading/trailing whitespace
+        if (messageText.isEmpty()) {
+            return; // Do not process empty messages
+        }
 
-        if ("/leave".equalsIgnoreCase(messageText.trim())) {
-            message = new Message("command", username, null, "/leave", false);
-            this.displayMessage(message);
-
-        } else if (messageText.startsWith("/w ")) {
-            String[] parts = messageText.split(" ", 3);
-            if (parts.length >= 3) {
-                String recipient = parts[1];
-                messageText = parts[2];
-                message = new Message("private", username, recipient, messageText.trim(), false);
+        if (messageText.startsWith("/")) {
+            String[] parts = messageText.split(" ", 3); // Split only needed for commands
+            if (parts[0].startsWith("/call") && parts.length == 2) {
+                this.client.voIPClient.startCall(username);
+                Message callMessage = new Message("call", username, parts[1], "call", false);
+                this.client.sendMessage(callMessage);
+            } else if (parts[0].startsWith("/deny") && parts.length == 2) {
+                this.client.voIPClient.denyCall(username);
+                Message callMessage = new Message("call", username, parts[1], "deny", false);
+                this.client.sendMessage(callMessage);
+            } else if (parts[0].startsWith("/leave") && parts.length == 2) {
+                this.client.voIPClient.leaveCall(parts[1]);
+            } else if (parts[0].startsWith("/accept") && parts.length == 2) {
+                this.client.voIPClient.acceptCall(parts[1]);
+                Message callMessage = new Message("call", username, parts[1], "accept", false);
+                this.client.sendMessage(callMessage);
+            } else if (parts[0].startsWith("/w") && parts.length == 3) {
+                Message message = new Message("private", username, parts[1], parts[2].trim(), false);
                 this.client.sendMessage(message);
                 this.displayMessage(message);
+            } else if (parts[0].equalsIgnoreCase("/exit")) {
+                Message message = new Message("command", username, null, "/exit", false);
+                this.displayMessage(message);
+            } else {
+                handleNormalMessage(messageText);
             }
-
-        } else if (!messageText.trim().isEmpty()) {
-            message = new Message("broadcast", username, null, messageText.trim(), false);
-            this.client.sendMessage(message);
-            this.displayMessage(message);
+        } else {
+            handleNormalMessage(messageText);
         }
         InputMessage.clear();
+    }
+
+    /**
+     * Handles normal (non-command) message sending and displaying.
+     * 
+     * @param messageText The text of the message to be sent.
+     */
+    private void handleNormalMessage(String messageText) {
+        Message message = new Message("broadcast", username, null, messageText, false);
+        this.client.sendMessage(message);
+        this.displayMessage(message);
     }
 
     @FXML
@@ -130,7 +148,7 @@ public class ChatGuiController extends Application {
                 this.client.voIPClient.start(); // Start the VoIP call
                 btnStartCall.setText("End Call");
             } else {
-                this.client.voIPClient.stop(); // End the VoIP call
+                this.client.voIPClient.leaveCall(null); // End the VoIP call
                 btnStartCall.setText("Start Call");
             }
         } catch (Exception e) {
@@ -201,7 +219,24 @@ public class ChatGuiController extends Application {
             } else {
                 formattedMessage = "[" + message.getSender() + "] (whisper) " + message.getContent();
             }
-        } else if (message.getType().equals("command") && message.getContent().equalsIgnoreCase("/leave")) {
+        } else if (message.getType().equals("call")) {
+            if (message.getContent().equals("call")) {
+                if (message.getSender().equals(username))
+                    formattedMessage = "Attepmpting to call " + message.getRecipient();
+                else
+                    formattedMessage = message.getSender() + " is trying to call you";
+            } else if (message.getContent().equals("deny")) {
+                if (message.getSender().equals(username))
+                    formattedMessage = "Denied call from " + message.getRecipient();
+                else
+                    formattedMessage = message.getRecipient() + " denied your call";
+            } else if (message.getContent().equals("accept")) {
+                if (message.getSender().equals(username))
+                    formattedMessage = "Accepted call from " + message.getRecipient() + "... Say Hello!";
+                else
+                    formattedMessage = message.getRecipient() + " accepted your call";
+            }
+        } else if (message.getType().equals("command") && message.getContent().equalsIgnoreCase("/exit")) {
             formattedMessage = "You have left the chat.";
             this.client.closeEverythingHelper();
             Platform.exit();

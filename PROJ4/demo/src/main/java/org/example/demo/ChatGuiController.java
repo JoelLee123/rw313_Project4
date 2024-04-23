@@ -254,36 +254,33 @@ public class ChatGuiController extends Application {
 
     @FXML
     void btnStartRecordingClicked(ActionEvent event) {
-
         btnStartRecording.setDisable(true);
         btnSendMessage.setDisable(true);
         btnEndRecording.setDisable(false);
+        recording = true; // Ensure recording state is set to true when starting
+
         try {
-            // Initialize the audioFormat and audioLine
+            // Reinitialize audio format and line each time
             audioFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100, 16, 2, 4, 44100, false);
             DataLine.Info info = new DataLine.Info(TargetDataLine.class, audioFormat);
 
             if (!AudioSystem.isLineSupported(info)) {
-                System.out.print("Data line not supported");
+                System.out.println("Data line not supported");
+                return;
             }
 
+            if (audioLine != null) {
+                audioLine.close(); // Close previous line if exists
+            }
             audioLine = (TargetDataLine) AudioSystem.getLine(info);
             audioLine.open();
-            audioLine.start(); // The start of the recording
+            audioLine.start();
 
-            // Initialize the audioByteSteam
             audioByteStream = new ByteArrayOutputStream();
-
-            // We want to start recording on a separate thread so that recording audio does
-            // not affect the other parts of the program
-            new Thread(() -> {
-                System.out.println("Start Recording...");
-                recordAudio();
-            }).start();
-
-            System.out.println("Start Recording Clicked");
+            new Thread(this::recordAudio).start();
+            System.out.println("Recording started.");
         } catch (LineUnavailableException e) {
-            System.out.println("ERROR - Could not startRecording");
+            System.out.println("ERROR - Could not start recording");
             e.printStackTrace();
         }
     }
@@ -291,7 +288,6 @@ public class ChatGuiController extends Application {
     private void recordAudio() {
         byte[] buffer = new byte[4096];
         int bytesRead;
-
         try {
             while (recording && (bytesRead = audioLine.read(buffer, 0, buffer.length)) != -1) {
                 System.out.println("Reading in the bytes");
@@ -311,52 +307,49 @@ public class ChatGuiController extends Application {
     void btnEndRecordingClicked(ActionEvent event) {
         System.out.println("End Recording Clicked");
 
-        // Enable buttons again
+        // Re-enable buttons
         btnStartRecording.setDisable(false);
         btnSendMessage.setDisable(false);
-
-        // Disable end recording button once clicked
         btnEndRecording.setDisable(true);
 
-        // Stop audio recording
-        recording = false;
-        audioLine.stop();
-        audioLine.close();
+        try {
+            // Stop and close the audio line securely
+            recording = false;
+            if (audioLine != null) {
+                audioLine.stop();
+                audioLine.close();
+            }
 
-        // Encode audio data
-        audioData = audioByteStream.toByteArray();
+            // Process the recorded audio data
+            audioData = audioByteStream.toByteArray();
+            byte[] encodedAudioData = encodeAudioData(audioData);
 
-        byte[] encodedAudioData = encodeAudioData(audioData);
-        System.out.println("Data encoded");
+            // Determine message type based on input prefix
+            String whisper = InputMessage.getText().trim();
+            Message audioMessage;
+            if (whisper.startsWith("/w")) {
+                String[] parts = whisper.split(" ", 3);
+                if (parts.length == 2) {
+                    String recipient = parts[1];
+                    audioMessage = new Message("private", username, recipient, encodedAudioData, true);
+                } else {
+                    return; // Exit method to avoid sending malformed message
+                }
+            } else {
+                audioMessage = new Message("broadcast", username, null, encodedAudioData, true);
+            }
 
-        // PLAYBACK FEATURE - USED FOR DEBUGGING!
-        System.out.println("Size of encoded audio in bytes: " + encodedAudioData.length);
-        playAudio(encodedAudioData);
-
-        // Create a new audio message and send it to the server
-        Message audioMessage = null;
-
-        // HERE I WANT TO DO SOME CHECKS FOR PRIVATE VOICE NOTES
-        String whisper = InputMessage.getText();
-        if (whisper.isEmpty()) {
-            // NORMAL BROADCAST AS USUAL
-            System.out.println("PUBLIC VOICE NOTE CASE");
-            audioMessage = new Message("broadcast", username, null, encodedAudioData, true);
-        } else if (whisper.startsWith("/w")) {
-            // BASICALLY DOING WHAT JOSEF DID IN SEND MESSAGE
-            System.out.println("PRIVATE VOICE NOTE CASE");
-            String[] parts = whisper.split(" ", 2); // Only 2 parts; /w and 'Name'
-            String recipient = parts[1];
-            audioMessage = new Message("private", username, recipient, encodedAudioData, true);
-        } else {
-            System.out.println("HANDLE THIS BETTER - FOR NOW THIS WILL DO!");
-            System.exit(0);
+            // Send the constructed message
+            client.sendMessage(audioMessage);
+            System.out.println("Message sent");
+        } finally {
+            // Reset stream for next recording
+            if (audioByteStream != null) {
+                audioByteStream.reset();
+            }
+            // Clear input message text
+            InputMessage.clear();
         }
-
-        System.out.println("Message object created");
-        client.sendMessage(audioMessage);
-        System.out.println("Message sent");
-        InputMessage.clear();
     }
 
     private void playAudio(byte[] audioData) {
@@ -366,14 +359,9 @@ public class ChatGuiController extends Application {
                     new ByteArrayInputStream(audioData), audioFormat,
                     audioData.length / audioFormat.getFrameSize());
 
-            // Create a Clip to play back the audio
             Clip clip = AudioSystem.getClip();
             clip.open(audioInputStream);
-
-            // Start playback
             clip.start();
-
-            // Wait for playback to finish
             clip.drain();
             clip.close();
         } catch (Exception e) {

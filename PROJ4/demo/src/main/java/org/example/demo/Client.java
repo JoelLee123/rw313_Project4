@@ -63,6 +63,10 @@ public class Client extends Application {
     public Client() {
     }
 
+    public String getUsername() {
+        return this.username;
+    }
+
     /**
      * Sends a message to the server.
      *

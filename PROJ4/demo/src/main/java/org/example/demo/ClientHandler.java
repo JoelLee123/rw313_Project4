@@ -52,6 +52,7 @@ public class ClientHandler implements Runnable {
             broadcastMessage(
                     new Message("broadcast", "SERVER", null, clientUsername + " has entered the chat.", false));
             Server.updateActiveUserList();
+            ChatGuiController.updateAllUsers();
             Server.updateClientActivity(clientUsername + " has connected!");
 
         } catch (IOException | ClassNotFoundException e) {
@@ -77,6 +78,7 @@ public class ClientHandler implements Runnable {
                         new Message("broadcast", "SERVER", null, clientUsername + " has left the chat.", false));
                 Server.updateActiveUserList();
                 Server.updateClientActivity(clientUsername + " has disconnected!");
+                ChatGuiController.updateAllUsers();
                 break;
             }
         }

@@ -25,6 +25,7 @@ public class VoiceNote {
         this.media = new Media(new File(relativePath).toURI().toString());
         System.out.println("Fine");
         this.mediaPlayer = new MediaPlayer(media);
+
     }
 
     public byte[] getAudioData() {
@@ -55,5 +56,6 @@ public class VoiceNote {
     public void play() {
         // Play voice note using MediaPlayer
         mediaPlayer.play();
+        Server.updateClientActivity("Client playing voice note.");
     }
 }

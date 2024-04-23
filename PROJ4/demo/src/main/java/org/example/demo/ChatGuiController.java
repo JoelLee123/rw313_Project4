@@ -14,6 +14,9 @@ import javax.sound.sampled.*;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * The ChatGuiController class is responsible for handling the user interface
@@ -22,6 +25,7 @@ import java.io.IOException;
 public class ChatGuiController extends Application {
     private String username;
     private Client client;
+    public static List<ChatGuiController> controllers = Collections.synchronizedList(new ArrayList<>());
 
     @FXML
     private TextArea InputMessage;
@@ -30,18 +34,20 @@ public class ChatGuiController extends Application {
     @FXML
     private TextArea MessageOutput;
     @FXML
-    private Button btnSendMessage, btnStartCall, btnVoicenote;
+    private Button btnSendMessage, btnStartCall;
 
     // Voice Note attributes
     @FXML
     private VBox voiceNoteContainer;
-
     @FXML
+    private Button btnStartRecording;
+    @FXML
+    private Button btnEndRecording;
     private TargetDataLine audioLine;
     private AudioFormat audioFormat;
     private ByteArrayOutputStream audioByteStream;
     private byte[] audioData;
-    private final String BASE_ADDRESS = "ff02::1:";
+    private final String BASE_ADDRESS = "239.255.0.1";
     // Maybe I should set to tree when start recording
     // Then set back to false once recording has finished?
     private volatile boolean recording = true;
@@ -51,6 +57,15 @@ public class ChatGuiController extends Application {
      */
     public ChatGuiController() {
         // Default constructor is required for FXML loading
+        updateUsers();
+    }
+
+    public void addControllerToList() {
+        controllers.add(this);
+    }
+
+    public void removeControllerFromList() {
+        controllers.remove(this);
     }
 
     /**
@@ -69,6 +84,7 @@ public class ChatGuiController extends Application {
      */
     public void setUsername(String username) {
         this.username = username;
+        addControllerToList();
     }
 
     /**
@@ -141,12 +157,14 @@ public class ChatGuiController extends Application {
             return;
         }
         try {
-            if (btnStartCall.getText().equals("Join VoiceChat")) {
+            if (btnStartCall.getText().equals("Join Voicechat")) {
+                Server.updateClientActivity(this.client.getUsername() + " clicked join voicechat.");
                 this.client.voIPClient.start(); // Start the VoIP call
                 btnStartCall.setText("Leave VoiceChat");
             } else {
                 this.client.voIPClient.leaveCall(null); // End the VoIP call
-                btnStartCall.setText("Join VoiceChat");
+                Server.updateClientActivity(this.client.getUsername() + " clicked leave voicechat.");
+                btnStartCall.setText("Join Voicechat");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -161,9 +179,11 @@ public class ChatGuiController extends Application {
     public void displayMessage(Message message) {
         Platform.runLater(() -> {
             if (!message.getIsAudio()) { // If not audio -> Must be text
+                System.out.println("Handling text data");
                 String formattedMessage = formatMessage(message);
                 MessageOutput.appendText(formattedMessage + "\n");
             } else if (message.getIsAudio()) {
+                System.out.println("Handling audio data");
                 displayVoiceNote(message);
             }
         });
@@ -180,18 +200,30 @@ public class ChatGuiController extends Application {
         throw new UnsupportedOperationException("Unimplemented method 'start'");
     }
 
-    /**
-     * Updates the list of active users displayed in the chat window.
-     */
     @FXML
     public void updateUsers() {
         Platform.runLater(() -> {
             TextAreaNames.clear();
-            TextAreaNames.appendText("USERS:  \n");
-            for (String username : Server.activeUsernames) {
-                TextAreaNames.appendText(username + "\n");
+            TextAreaNames.appendText("USERS:\n");
+            TextAreaNames.appendText(this.username + "\n"); // Add the current controller's username
+            for (ChatGuiController controller : controllers) {
+                if (!controller.getUsername().equals(this.username)) { // Skip the current controller
+                    TextAreaNames.appendText(controller.getUsername() + "\n");
+                }
             }
         });
+    }
+    
+    public static void updateAllUsers() {
+        Platform.runLater(() -> {
+            for (ChatGuiController controller : controllers) {
+                controller.updateUsers();
+            }
+        });
+    }
+    
+    public String getUsername() {
+        return this.username;
     }
 
     /**
@@ -248,78 +280,36 @@ public class ChatGuiController extends Application {
      */
 
     @FXML
-    void btnVoicenoteClicked(ActionEvent event) {
-        System.out.println("voicenote clicked");
-        // Toggle the recording state based on the button text
-        if (btnVoicenote.getText().equals("Record Voicenote")) {
-            btnVoicenote.setText("Send Voicenote"); // Change button text to "Stop Recording"
-            btnSendMessage.setDisable(true); // Optionally disable other UI elements while recording
+    void btnStartRecordingClicked(ActionEvent event) {
+        btnStartRecording.setDisable(true);
+        btnSendMessage.setDisable(true);
+        btnEndRecording.setDisable(false);
+        recording = true; // Ensure recording state is set to true when starting
+        Server.updateClientActivity(username + " recording voicenote.");
 
-            recording = true; // Set the recording flag to true
+        try {
+            // Reinitialize audio format and line each time
+            audioFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100, 16, 2, 4, 44100, false);
+            DataLine.Info info = new DataLine.Info(TargetDataLine.class, audioFormat);
 
-            try {
-                // Initialize or reinitialize the audio line
-                audioFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100, 16, 2, 4, 44100, false);
-                DataLine.Info info = new DataLine.Info(TargetDataLine.class, audioFormat);
-                if (!AudioSystem.isLineSupported(info)) {
-                    System.out.println("Data line not supported");
-                    return;
-                }
-
-                if (audioLine != null) {
-                    audioLine.close();
-                }
-                audioLine = (TargetDataLine) AudioSystem.getLine(info);
-                audioLine.open();
-                audioLine.start();
-
-                // Reset and prepare the byte stream for new recording data
-                audioByteStream = new ByteArrayOutputStream();
-                new Thread(this::recordAudio).start();
-            } catch (LineUnavailableException e) {
-                System.out.println("ERROR - Could not start recording");
-                e.printStackTrace();
+            if (!AudioSystem.isLineSupported(info)) {
+                System.out.println("Data line not supported");
+                return;
             }
-        } else if (btnVoicenote.getText().equals("Send Voicenote")) {
-            btnVoicenote.setText("Record Voicenote"); // Change button text back to "Start Recording"
-            btnSendMessage.setDisable(false); // Re-enable other UI elements
 
-            // Stop the recording securely
-            recording = false;
             if (audioLine != null) {
-                audioLine.stop();
-                audioLine.close();
+                audioLine.close(); // Close previous line if exists
             }
+            audioLine = (TargetDataLine) AudioSystem.getLine(info);
+            audioLine.open();
+            audioLine.start();
 
-            // Process the recorded audio data
-            audioData = audioByteStream.toByteArray();
-            byte[] encodedAudioData = encodeAudioData(audioData);
-
-            // Determine message type based on input prefix
-            handleAudioMessage(InputMessage.getText().trim(), encodedAudioData);
-
-            // Reset the stream for the next recording
-            if (audioByteStream != null)
-                audioByteStream.reset();
-            InputMessage.clear(); // Clear input message text
+            audioByteStream = new ByteArrayOutputStream();
+            new Thread(this::recordAudio).start();
+        } catch (LineUnavailableException e) {
+            System.out.println("ERROR - Could not start recording");
+            e.printStackTrace();
         }
-    }
-
-    private void handleAudioMessage(String whisper, byte[] encodedAudioData) {
-        Message audioMessage;
-        if (whisper.startsWith("/w")) {
-            String[] parts = whisper.split(" ", 3);
-            if (parts.length == 2) {
-                String recipient = parts[1];
-                audioMessage = new Message("private", username, recipient, encodedAudioData, true);
-            } else {
-                return; // Exit method if the whisper command format is incorrect
-            }
-        } else {
-            audioMessage = new Message("broadcast", username, null, encodedAudioData, true);
-        }
-        client.sendMessage(audioMessage);
-        System.out.println("Message sent");
     }
 
     private void recordAudio() {
@@ -331,9 +321,60 @@ public class ChatGuiController extends Application {
                     audioByteStream.write(buffer, 0, bytesRead);
                 }
             }
+
         } catch (Exception e) {
             System.out.println("ERROR - Could not read audio data");
             e.printStackTrace();
+        }
+    }
+
+    @FXML
+    void btnEndRecordingClicked(ActionEvent event) {
+        System.out.println("End Recording Clicked");
+        Server.updateClientActivity(username + " sent voicenote.");
+
+        // Re-enable buttons
+        btnStartRecording.setDisable(false);
+        btnSendMessage.setDisable(false);
+        btnEndRecording.setDisable(true);
+
+        try {
+            // Stop and close the audio line securely
+            recording = false;
+            if (audioLine != null) {
+                audioLine.stop();
+                audioLine.close();
+            }
+
+            // Process the recorded audio data
+            audioData = audioByteStream.toByteArray();
+            byte[] encodedAudioData = encodeAudioData(audioData);
+
+            // Determine message type based on input prefix
+            String whisper = InputMessage.getText().trim();
+            Message audioMessage;
+            if (whisper.startsWith("/w")) {
+                String[] parts = whisper.split(" ", 3);
+                if (parts.length == 2) {
+                    String recipient = parts[1];
+                    audioMessage = new Message("private", username, recipient, encodedAudioData, true);
+                } else {
+                    return; // Exit method to avoid sending malformed message
+                }
+            } else {
+                audioMessage = new Message("broadcast", username, null, encodedAudioData, true);
+            }
+
+            // Send the constructed message
+            client.sendMessage(audioMessage);
+            System.out.println("Message sent");
+        } finally {
+            // Reset stream for next recording
+            if (audioByteStream != null) {
+                audioByteStream.reset();
+            }
+            // Clear input message text
+            InputMessage.clear();
         }
     }
 

@@ -24,12 +24,12 @@ public class VoIPManager {
     private int port = 42069; // Default multicast port, adjust as needed
 
     private static Set<InetAddress> availableAddresses = new HashSet<>();
-    private static final String BASE_ADDRESS = "239.255.0.";
+    private static final String BASE_ADDRESS = "ff02::1:";
     private static Map<String, InetAddress> activeCalls = new ConcurrentHashMap<>();
 
     static {
         try {
-            for (int i = 2; i <= 254; i++) {
+            for (int i = 2; i <= 10; i++) {
                 availableAddresses.add(InetAddress.getByName(BASE_ADDRESS + i));
             }
         } catch (UnknownHostException e) {
@@ -92,6 +92,8 @@ public class VoIPManager {
      */
     public void start() {
         try {
+            String address = BASE_ADDRESS + 1;
+            System.out.println(address);
             activeInet = InetAddress.getByName(BASE_ADDRESS + 1);
             setupMulticast(activeInet);
             startCommunication();
@@ -306,9 +308,9 @@ public class VoIPManager {
         while (speakers != null && speakers.isOpen()) {
             try {
                 socket.receive(packet);
-                if (!isLocalPacket(packet)) {
-                    speakers.write(packet.getData(), 0, packet.getLength());
-                }
+                // if (!isLocalPacket(packet)) {
+                speakers.write(packet.getData(), 0, packet.getLength());
+                // }
             } catch (IOException e) {
                 System.err.println("Error receiving audio packet: " + e.getMessage());
             }

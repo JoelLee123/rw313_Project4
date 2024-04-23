@@ -278,7 +278,6 @@ public class ChatGuiController extends Application {
 
             audioByteStream = new ByteArrayOutputStream();
             new Thread(this::recordAudio).start();
-            System.out.println("Recording started.");
         } catch (LineUnavailableException e) {
             System.out.println("ERROR - Could not start recording");
             e.printStackTrace();
@@ -290,7 +289,6 @@ public class ChatGuiController extends Application {
         int bytesRead;
         try {
             while (recording && (bytesRead = audioLine.read(buffer, 0, buffer.length)) != -1) {
-                System.out.println("Reading in the bytes");
                 if (bytesRead > 0) {
                     audioByteStream.write(buffer, 0, bytesRead);
                 }
@@ -299,8 +297,6 @@ public class ChatGuiController extends Application {
             System.out.println("ERROR - Could not read audio data");
             e.printStackTrace();
         }
-
-        System.out.println("Recording finished");
     }
 
     @FXML
@@ -352,24 +348,6 @@ public class ChatGuiController extends Application {
         }
     }
 
-    private void playAudio(byte[] audioData) {
-        try {
-            // Create an AudioInputStream from the recorded audio data
-            AudioInputStream audioInputStream = new AudioInputStream(
-                    new ByteArrayInputStream(audioData), audioFormat,
-                    audioData.length / audioFormat.getFrameSize());
-
-            Clip clip = AudioSystem.getClip();
-            clip.open(audioInputStream);
-            clip.start();
-            clip.drain();
-            clip.close();
-        } catch (Exception e) {
-            System.out.println("ERROR - Could not play audio");
-            e.printStackTrace();
-        }
-    }
-
     private byte[] encodeAudioData(byte[] audioData) {
         try {
             // Encode the audioData to a suitable format (e.g., MP3)
@@ -405,7 +383,6 @@ public class ChatGuiController extends Application {
     }
 
     Hyperlink createVoiceNoteLink(byte[] audioData, String sender, String fileName) {
-        System.out.println("Created voice note link!");
         Hyperlink link = new Hyperlink("Voice note from " + sender);
         link.setOnAction(event -> {
             VoiceNote voiceNote = new VoiceNote(audioData, sender, fileName);

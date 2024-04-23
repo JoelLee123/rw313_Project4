@@ -292,7 +292,8 @@ public class VoIPManager {
             int bytesRead = microphone.read(buffer, 0, buffer.length);
             DatagramPacket packet = new DatagramPacket(buffer, bytesRead, activeInet, port);
             try {
-                socket.send(packet);
+                if (socket != null)
+                    socket.send(packet);
             } catch (IOException e) {
                 System.err.println("Error sending audio packet: " + e.getMessage());
             }
@@ -307,12 +308,13 @@ public class VoIPManager {
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
         while (speakers != null && speakers.isOpen()) {
             try {
-                socket.receive(packet);
-                // if (!isLocalPacket(packet)) {
-                speakers.write(packet.getData(), 0, packet.getLength());
-                // }
+                if (socket != null) {
+                    socket.receive(packet);
+                    // if (!isLocalPacket(packet)) {
+                    speakers.write(packet.getData(), 0, packet.getLength());
+                    // }
+                }
             } catch (IOException e) {
-                System.err.println("Error receiving audio packet: " + e.getMessage());
             }
         }
     }

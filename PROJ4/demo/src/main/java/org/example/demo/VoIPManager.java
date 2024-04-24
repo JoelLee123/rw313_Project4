@@ -216,17 +216,17 @@ public class VoIPManager {
         if (address != null) {
             try {
                 if (socket != null) {
-                    socket.leaveGroup(new InetSocketAddress(address, port), networkInterface);
+                    socket.leaveGroup(new InetSocketAddress(address, port), networkInterface); // leave group
                     socket.close();
                     socket = null;
                 }
                 if (microphone != null) {
-                    microphone.stop();
+                    microphone.stop(); // stop microphone
                     microphone.close();
                     microphone = null;
                 }
                 if (speakers != null) {
-                    speakers.stop();
+                    speakers.stop(); // stop speakers
                     speakers.close();
                     speakers = null;
                 }
@@ -269,7 +269,7 @@ public class VoIPManager {
             throw new LineUnavailableException("Microphone line not supported.");
         }
         TargetDataLine mic = (TargetDataLine) AudioSystem.getLine(micInfo);
-        mic.open(audioFormat);
+        mic.open(audioFormat); // open mic
         return mic;
     }
 
@@ -286,7 +286,7 @@ public class VoIPManager {
             throw new LineUnavailableException("Speakers line not supported.");
         }
         SourceDataLine speakers = (SourceDataLine) AudioSystem.getLine(speakerInfo);
-        speakers.open(audioFormat);
+        speakers.open(audioFormat); // open speakers
         return speakers;
     }
 
@@ -303,7 +303,7 @@ public class VoIPManager {
             DatagramPacket packet = new DatagramPacket(buffer, bytesRead, activeInet, port);
             try {
                 if (socket != null)
-                    socket.send(packet);
+                    socket.send(packet); // send packets if not null
             } catch (IOException | NullPointerException e) {
 
             }

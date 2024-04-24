@@ -70,7 +70,7 @@ public class ClientHandler implements Runnable {
         while (socket.isConnected()) {
             try {
                 messageFromClient = (Message) objectInputStream.readObject();
-                processMessage(messageFromClient);
+                processMessage(messageFromClient); // Process the received message
             } catch (IOException | ClassNotFoundException e) {
                 System.out.println(clientUsername + " has disconnected!");
                 broadcastMessage(
@@ -80,25 +80,31 @@ public class ClientHandler implements Runnable {
                 break;
             }
         }
-        removeClientHandler();
+        removeClientHandler(); // Remove this client handler when disconnected
     }
 
+    /**
+     * Processes the received message based on its type and content.
+     *
+     * @param message the received message
+     * @throws IOException if an I/O error occurs when writing to the output stream
+     */
     private void processMessage(Message message) throws IOException {
-        if (!message.getIsAudio()) {
-            if (message.getContent().equals("/leave")) {
-                handleLeave();
+        if (!message.getIsAudio()) { // If the message is not an audio message
+            if (message.getContent().equals("/exit")) {
+                handleLeave(); // Handle the "/leave" command
             } else if (message.getType().equals("private")) {
-                sendPrivateMessage(message);
+                sendPrivateMessage(message); // Send the message as a private message
             } else if (message.getType().equals("call")) {
-                sendPrivateMessage(message);
+                sendPrivateMessage(message); // Send the message as a private message (for VoIP calls)
             } else {
-                broadcastMessage(message);
+                broadcastMessage(message); // Broadcast the message to all other clients
             }
-        } else {
+        } else { // If the message is an audio message
             if (message.getType().equals("private"))
-                sendPrivateMessage(message);
+                sendPrivateMessage(message); // Send the audio message as a private message
             else
-                broadcastMessage(message);
+                broadcastMessage(message); // Broadcast the audio message to all other clients
         }
     }
 
@@ -126,7 +132,7 @@ public class ClientHandler implements Runnable {
                     "User '" + message.getRecipient() + "' not found.", false));
             objectOutputStream.flush();
         } catch (IOException e) {
-
+            // Handle the exception
         }
     }
 

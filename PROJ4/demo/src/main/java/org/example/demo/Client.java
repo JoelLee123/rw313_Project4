@@ -12,8 +12,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.stage.Stage;
 
-import javax.swing.plaf.synth.SynthTextAreaUI;
-
 /**
  * The Client class handles the client-side functionality of the chat
  * application.
@@ -47,11 +45,8 @@ public class Client extends Application {
             this.username = username;
             this.voIPClient = voIPClient;
             // Send the username as a Message object to the server
-            System.out.println("");
             sendMessage(new Message("login", username, null, username, false));
-            System.out.println("");
             listenForMessage();
-            System.out.println("");
         } catch (IOException e) {
             closeEverything(socket, objectInputStream, objectOutputStream);
         }
@@ -97,7 +92,7 @@ public class Client extends Application {
                                 Platform.runLater(() -> {
                                     try {
                                         closeEverything(socket, objectInputStream, objectOutputStream);
-                                        restartClient(username);
+                                        restartClient(username); // restart the client if username has been taken
                                     } catch (IOException e) {
                                         e.printStackTrace();
                                     }
@@ -107,7 +102,7 @@ public class Client extends Application {
                             }
                         }
                         controller.displayMessage(messageFromServer);
-                        controller.updateUsers();
+                        // controller.updateUsers();
                     } else {
                         closeEverything(socket, objectInputStream, objectOutputStream);
                         System.out.println("SERVER: Server down, disconnecting clients...");
@@ -140,13 +135,13 @@ public class Client extends Application {
             ObjectOutputStream objectOutputStream) {
         try {
             if (objectOutputStream != null) {
-                objectOutputStream.close();
+                objectOutputStream.close(); // close outputstream
             }
             if (objectInputStream != null) {
-                objectInputStream.close();
+                objectInputStream.close(); // close inputstream
             }
             if (socket != null) {
-                socket.close();
+                socket.close(); // close socket
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -193,12 +188,14 @@ public class Client extends Application {
      * @throws IOException If the FXML file cannot be loaded.
      */
     public void restartClient(String usernameTaken) throws IOException {
+        // Close the chat stage if it exists
         Platform.runLater(() -> {
             if (chatStage != null) {
                 chatStage.close();
             }
         });
 
+        // Load the login screen and show an error message
         Platform.runLater(() -> {
             try {
                 FXMLLoader fxmlLoader = new FXMLLoader(Client.class.getResource("MainController.fxml"));

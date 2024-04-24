@@ -21,10 +21,10 @@ public class Message implements Serializable {
     /**
      * Constructs a new Message instance with the specified parameters.
      *
-     * @param type      The type of the message ("broadcast" or "private").
-     * @param sender    The username of the sender.
-     * @param recipient The username of the recipient (for private messages).
-     * @param textContent   The textual content of the message.
+     * @param type        The type of the message ("broadcast" or "private").
+     * @param sender      The username of the sender.
+     * @param recipient   The username of the recipient (for private messages).
+     * @param textContent The textual content of the message.
      */
     public Message(String type, String sender, String recipient, String textContent, boolean isAudio) {
         this.type = type;
@@ -35,11 +35,20 @@ public class Message implements Serializable {
         this.isAudio = isAudio;
     }
 
+    /**
+     * Constructs a new Message instance with the specified parameters.
+     *
+     * @param type         The type of the message ("broadcast" or "private").
+     * @param sender       The username of the sender.
+     * @param recipient    The username of the recipient (for private messages).
+     * @param audioContent The byte array for voicenotes
+     * @param textContent  The textual content of the message.
+     */
     public Message(String type, String sender, String recipient, byte[] audioContent, boolean isAudio) {
         this.type = type;
         this.sender = sender;
         this.recipient = recipient;
-        this.textContent = null;    //Voice notes have no text
+        this.textContent = null; // Voice notes have no text
         this.audioContent = audioContent;
         this.isAudio = isAudio;
     }
@@ -80,7 +89,7 @@ public class Message implements Serializable {
         return textContent;
     }
 
-    //VOICE NOTE METHODS
+    // VOICE NOTE METHODS
     public byte[] getAudioContent() {
         return audioContent;
     }

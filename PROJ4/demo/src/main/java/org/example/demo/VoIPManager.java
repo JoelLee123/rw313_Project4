@@ -8,14 +8,11 @@ import java.net.InterfaceAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.SocketException;
-import java.net.UnknownHostException;
+
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
@@ -40,20 +37,8 @@ public class VoIPManager {
     private Set<InetAddress> localAddresses;
     private int port = 42069; // Default multicast port, adjust as needed
 
-    private static Set<InetAddress> availableAddresses = new HashSet<>();
     private static final double THRESHOLD_VALUE = 1000;
     private static final String BASE_ADDRESS = "ff02::1:";
-    private static Map<String, InetAddress> activeCalls = new ConcurrentHashMap<>();
-
-    static {
-        try {
-            for (int i = 2; i <= 10; i++) {
-                availableAddresses.add(InetAddress.getByName(BASE_ADDRESS + i));
-            }
-        } catch (UnknownHostException e) {
-            System.err.println("Failed to initialise available addresses: " + e.getMessage());
-        }
-    }
 
     /**
      * Constructs a new VoIPManager, initializing network interfaces and local
@@ -110,8 +95,8 @@ public class VoIPManager {
      */
     public void start() {
         try {
-            activeInet = InetAddress.getByName(BASE_ADDRESS + 1);
-            setupMulticast(activeInet);
+            this.activeInet = InetAddress.getByName("ff02::1");
+            setupMulticast(this.activeInet);
             startCommunication();
         } catch (IOException | LineUnavailableException e) {
             System.err.println("Error starting VoIP communication: " + e.getMessage());
@@ -126,9 +111,11 @@ public class VoIPManager {
     public void startCall(String sender) {
         try {
             this.activeInet = allocateMulticastAddress();
+            this.activeInet = InetAddress.getByName("ff02::1:3");
             setupMulticast(this.activeInet);
             startCommunication();
-            activeCalls.put(sender, this.activeInet);
+            Server.addActiveCall(sender, this.activeInet);
+            System.out.println(Server.activeCalls);
             System.out.println("Call started for: " + sender + " at " + this.activeInet);
         } catch (IOException | LineUnavailableException e) {
             System.err.println("Error starting call" + e.getMessage());
@@ -142,10 +129,11 @@ public class VoIPManager {
      */
     public void acceptCall(String username) {
         try {
-            this.activeInet = (InetAddress) activeCalls.get(username);
-            System.out.println("Joined " + username + " at " + this.activeInet);
+            System.out.println(Server.activeCalls);
+            // this.activeInet = (InetAddress) Server.getActiveCall(username);
+            this.activeInet = InetAddress.getByName("ff02::1:3");
             if (this.activeInet != null) {
-                setupMulticast(activeInet);
+                setupMulticast(this.activeInet);
                 startCommunication();
                 // System.out.println("Joined " + username + " at " + this.activeInet);
             } else {
@@ -163,9 +151,9 @@ public class VoIPManager {
      * @param username The user whose call is to be denied.
      */
     public void denyCall(String username) {
-        InetAddress address = activeCalls.remove(username);
+        InetAddress address = Server.removeActiveCall(username);
         if (address != null) {
-            availableAddresses.add(address);
+            Server.availableAddresses.add(address);
             System.out.println("Call with " + username + " has been denied and the address has been freed.");
         } else {
             System.err.println("No active call with username: " + username + " found to deny.");
@@ -178,8 +166,8 @@ public class VoIPManager {
      * @return The allocated InetAddress.
      */
     public static InetAddress allocateMulticastAddress() {
-        if (!availableAddresses.isEmpty()) {
-            Iterator<InetAddress> it = availableAddresses.iterator();
+        if (!Server.availableAddresses.isEmpty()) {
+            Iterator<InetAddress> it = Server.availableAddresses.iterator();
             InetAddress allocated = it.next();
             it.remove();
             return allocated;
@@ -221,7 +209,7 @@ public class VoIPManager {
     public void leaveCall(String username) {
         InetAddress address;
         if (username != null)
-            address = activeCalls.remove(username);
+            address = Server.removeActiveCall(username);
         else
             address = this.activeInet;
 
@@ -243,7 +231,7 @@ public class VoIPManager {
                     speakers = null;
                 }
                 if (username != null) {
-                    availableAddresses.add(address); // Add the address back to the pool of available addresses
+                    Server.availableAddresses.add(address); // Add the address back to the pool of available addresses
                     System.out.println("Stopped call and released resources for " + username);
                 }
 

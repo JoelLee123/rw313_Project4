@@ -104,20 +104,29 @@ public class ChatGuiController extends Application {
                 this.client.voIPClient.startCall(username);
                 Message callMessage = new Message("call", username, parts[1], "call", false);
                 this.client.sendMessage(callMessage);
+                this.displayMessage(callMessage);
             } else if (parts[0].startsWith("/deny") && parts.length == 2) {
                 this.client.voIPClient.denyCall(username);
                 Message callMessage = new Message("call", username, parts[1], "deny", false);
                 this.client.sendMessage(callMessage);
+                this.displayMessage(callMessage);
+
             } else if (parts[0].startsWith("/leave") && parts.length == 2) {
                 this.client.voIPClient.leaveCall(parts[1]);
+                Message callMessage = new Message("call", username, parts[1], "leave", false);
+                this.displayMessage(callMessage);
+
             } else if (parts[0].startsWith("/accept") && parts.length == 2) {
                 this.client.voIPClient.acceptCall(parts[1]);
                 Message callMessage = new Message("call", username, parts[1], "accept", false);
                 this.client.sendMessage(callMessage);
+                this.displayMessage(callMessage);
+
             } else if (parts[0].startsWith("/w") && parts.length == 3) {
                 Message message = new Message("private", username, parts[1], parts[2].trim(), false);
                 this.client.sendMessage(message);
                 this.displayMessage(message);
+
             } else if (parts[0].equalsIgnoreCase("/exit")) {
                 Message message = new Message("command", username, null, "/exit", false);
                 this.displayMessage(message);
@@ -241,8 +250,15 @@ public class ChatGuiController extends Application {
                     formattedMessage = "Accepted call from " + message.getRecipient() + "... Say Hello!";
                 else
                     formattedMessage = message.getRecipient() + " accepted your call";
+            } else if (message.getContent().equals("leave")) {
+                if (message.getSender().equals(username))
+                    formattedMessage = "Left call with " + message.getRecipient();
+                else
+                    formattedMessage = message.getRecipient() + " left the call";
             }
-        } else if (message.getType().equals("command") && message.getContent().equalsIgnoreCase("/exit")) {
+        } else if (message.getType().equals("command") && message.getContent().equalsIgnoreCase("/exit"))
+
+        {
             formattedMessage = "You have left the chat.";
             this.client.closeEverythingHelper();
             Platform.exit();

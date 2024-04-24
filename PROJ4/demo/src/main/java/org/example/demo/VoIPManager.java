@@ -185,6 +185,7 @@ public class VoIPManager {
      */
     private void setupMulticast(InetAddress address) throws IOException {
         socket = new MulticastSocket(port);
+        socket.setTimeToLive(2);
         socket.joinGroup(new InetSocketAddress(address, port), networkInterface);
     }
 

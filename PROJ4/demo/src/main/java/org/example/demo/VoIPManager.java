@@ -110,9 +110,7 @@ public class VoIPManager {
      */
     public void start() {
         try {
-            String address = BASE_ADDRESS.substring(0, BASE_ADDRESS.length() - 1);
-            System.out.println(address);
-            activeInet = InetAddress.getByName(address);
+            activeInet = InetAddress.getByName(BASE_ADDRESS + 1);
             setupMulticast(activeInet);
             startCommunication();
         } catch (IOException | LineUnavailableException e) {

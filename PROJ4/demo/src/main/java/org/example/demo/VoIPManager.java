@@ -123,13 +123,15 @@ public class VoIPManager {
      * 
      * @param username The user's identifier to start a call with.
      */
-    public void startCall(String username) {
+    public void startCall(String sender) {
         try {
-            activeInet = allocateMulticastAddress();
-            setupMulticast(activeInet);
+            this.activeInet = allocateMulticastAddress();
+            setupMulticast(this.activeInet);
             startCommunication();
+            activeCalls.put(sender, this.activeInet);
+            System.out.println("Call started for: " + sender + " at " + this.activeInet);
         } catch (IOException | LineUnavailableException e) {
-            System.err.println("Error starting call with user " + username + ": " + e.getMessage());
+            System.err.println("Error starting call" + e.getMessage());
         }
     }
 
@@ -140,10 +142,12 @@ public class VoIPManager {
      */
     public void acceptCall(String username) {
         try {
-            activeInet = activeCalls.get(username);
-            if (activeInet != null) {
+            this.activeInet = (InetAddress) activeCalls.get(username);
+            System.out.println("Joined " + username + " at " + this.activeInet);
+            if (this.activeInet != null) {
                 setupMulticast(activeInet);
                 startCommunication();
+                // System.out.println("Joined " + username + " at " + this.activeInet);
             } else {
                 System.err.println("No active call found for username: " + username);
             }
@@ -194,7 +198,6 @@ public class VoIPManager {
     private void setupMulticast(InetAddress address) throws IOException {
         socket = new MulticastSocket(port);
         socket.joinGroup(new InetSocketAddress(address, port), networkInterface);
-        this.activeInet = address;
     }
 
     /**
@@ -220,7 +223,7 @@ public class VoIPManager {
         if (username != null)
             address = activeCalls.remove(username);
         else
-            address = activeInet;
+            address = this.activeInet;
 
         if (address != null) {
             try {
@@ -353,12 +356,13 @@ public class VoIPManager {
     }
 
     public void muteMic() {
-        // System.out.println("muted");
-        microphone.stop();
+        System.out.println("muted");
+        this.microphone.stop();
     }
 
     public void unmuteMic() {
-        microphone.start();
+        System.out.println("unmuted");
+        this.microphone.start();
     }
 
     /**

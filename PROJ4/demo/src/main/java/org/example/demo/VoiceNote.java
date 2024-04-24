@@ -56,6 +56,6 @@ public class VoiceNote {
     public void play() {
         // Play voice note using MediaPlayer
         mediaPlayer.play();
-        Server.updateClientActivity("Client playing voice note.");
+        // Server.updateClientActivity("Client playing voice note.");
     }
 }

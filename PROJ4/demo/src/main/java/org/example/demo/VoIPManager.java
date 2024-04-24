@@ -1,10 +1,27 @@
 package org.example.demo;
 
-import javax.sound.sampled.*;
 import java.io.IOException;
-import java.net.*;
-import java.util.*;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.InterfaceAddress;
+import java.net.MulticastSocket;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.SourceDataLine;
+import javax.sound.sampled.TargetDataLine;
 
 /**
  * This class manages VoIP (Voice over IP) communications using multicast
@@ -24,6 +41,7 @@ public class VoIPManager {
     private int port = 42069; // Default multicast port, adjust as needed
 
     private static Set<InetAddress> availableAddresses = new HashSet<>();
+    private static final double THRESHOLD_VALUE = 1000;
     private static final String BASE_ADDRESS = "ff02::1:";
     private static Map<String, InetAddress> activeCalls = new ConcurrentHashMap<>();
 
@@ -92,7 +110,9 @@ public class VoIPManager {
      */
     public void start() {
         try {
-            activeInet = InetAddress.getByName(BASE_ADDRESS + 1);
+            String address = BASE_ADDRESS.substring(0, BASE_ADDRESS.length() - 1);
+            System.out.println(address);
+            activeInet = InetAddress.getByName(address);
             setupMulticast(activeInet);
             startCommunication();
         } catch (IOException | LineUnavailableException e) {
@@ -288,14 +308,31 @@ public class VoIPManager {
         byte[] buffer = new byte[1024];
         while (microphone != null && microphone.isOpen()) {
             int bytesRead = microphone.read(buffer, 0, buffer.length);
+
+            // Simple volume check to see if buffer is above the threshold
+            // if (isAboveThreshold(buffer, bytesRead)) {
             DatagramPacket packet = new DatagramPacket(buffer, bytesRead, activeInet, port);
             try {
                 if (socket != null)
                     socket.send(packet);
-            } catch (IOException e) {
-                System.err.println("Error sending audio packet: " + e.getMessage());
+            } catch (IOException | NullPointerException e) {
+
             }
+            // }
         }
+    }
+
+    private boolean isAboveThreshold(byte[] audioBuffer, int bytesRead) {
+        long sum = 0;
+        for (int i = 0; i < bytesRead; i += 2) {
+            // Combine two bytes to form a 16-bit sample
+            int sample = (audioBuffer[i + 1] << 8) | (audioBuffer[i] & 0xFF);
+            sum += Math.abs(sample); // Sum the absolute values of the samples
+        }
+        // Determine the average volume of this buffer
+        double average = sum / (bytesRead / 2.0);
+        // Return true if the average is above the threshold
+        return average > THRESHOLD_VALUE;
     }
 
     /**
@@ -308,13 +345,22 @@ public class VoIPManager {
             try {
                 if (socket != null) {
                     socket.receive(packet);
-                    // if (!isLocalPacket(packet)) {
-                    speakers.write(packet.getData(), 0, packet.getLength());
-                    // }
+                    if (!isLocalPacket(packet)) {
+                        speakers.write(packet.getData(), 0, packet.getLength());
+                    }
                 }
             } catch (IOException e) {
             }
         }
+    }
+
+    public void muteMic() {
+        // System.out.println("muted");
+        microphone.stop();
+    }
+
+    public void unmuteMic() {
+        microphone.start();
     }
 
     /**
@@ -324,7 +370,9 @@ public class VoIPManager {
      * @return true if the packet's source address is local, false otherwise.
      */
     private boolean isLocalPacket(DatagramPacket packet) {
-        return localAddresses.contains(packet.getAddress());
+        // System.out.println(localAddresses);
+        // return localAddresses.contains(packet.getAddress());
+        return false;
     }
 
     /**

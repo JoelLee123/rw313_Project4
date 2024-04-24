@@ -111,7 +111,7 @@ public class VoIPManager {
     public void startCall(String sender) {
         try {
             this.activeInet = allocateMulticastAddress();
-            this.activeInet = InetAddress.getByName("ff02::1:3");
+            this.activeInet = InetAddress.getByName("ff02::1");
             setupMulticast(this.activeInet);
             startCommunication();
             Server.addActiveCall(sender, this.activeInet);
@@ -131,7 +131,7 @@ public class VoIPManager {
         try {
             System.out.println(Server.activeCalls);
             // this.activeInet = (InetAddress) Server.getActiveCall(username);
-            this.activeInet = InetAddress.getByName("ff02::1:3");
+            this.activeInet = InetAddress.getByName("ff02::1");
             if (this.activeInet != null) {
                 setupMulticast(this.activeInet);
                 startCommunication();

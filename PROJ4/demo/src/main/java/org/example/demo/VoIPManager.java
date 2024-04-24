@@ -8,7 +8,7 @@ import java.net.InterfaceAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.SocketException;
-
+import java.net.UnknownHostException;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -208,10 +208,13 @@ public class VoIPManager {
      */
     public void leaveCall(String username) {
         InetAddress address;
-        if (username != null)
+
+        if (username != null) {
             address = Server.removeActiveCall(username);
-        else
             address = this.activeInet;
+        } else {
+            address = this.activeInet;
+        }
 
         if (address != null) {
             try {
